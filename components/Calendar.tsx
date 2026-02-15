@@ -4,22 +4,27 @@ import { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
-interface Event {
+export interface CalendarEvent {
   _id: string;
   type: 'training' | 'match' | 'tournament';
   date: string;
   time: string;
   location: string;
+  teamId?: { _id: string; name: string; category?: string };
   selectedChildrenIds?: string[] | null;
+  isRecurring?: boolean;
+  recurringRuleId?: string | null;
 }
 
+
 interface CalendarProps {
-  events: Event[];
+  events: CalendarEvent[];
   onDateClick?: (date: Date) => void;
-  onEventClick?: (event: Event) => void;
+  onEventClick?: (event: CalendarEvent) => void;
 }
 
 export default function Calendar({ events, onDateClick, onEventClick }: CalendarProps) {
+  type Event = CalendarEvent;
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const monthStart = startOfMonth(currentMonth);

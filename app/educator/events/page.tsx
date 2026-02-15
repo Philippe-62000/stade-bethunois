@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Calendar from '@/components/Calendar';
+import Calendar, { type CalendarEvent } from '@/components/Calendar';
 import { format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -92,8 +92,8 @@ export default function EducatorEventsPage() {
     }
   };
 
-  const handleEventClick = (event: Event) => {
-    setSelectedEventForDelete(event);
+  const handleEventClick = (event: CalendarEvent) => {
+    setSelectedEventForDelete(event as Event);
   };
 
   const handleDeleteEvent = async (scope: 'this' | 'future') => {
