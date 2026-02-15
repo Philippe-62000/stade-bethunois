@@ -127,14 +127,22 @@ export default function EducatorAvailabilitiesPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-bold text-gray-900">Présences</h1>
-            <button
-              onClick={() => router.push('/educator/events')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Retour aux événements
-            </button>
+            <div className="flex gap-2">
+              <a
+                href="/admin"
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium"
+              >
+                Retour au menu
+              </a>
+              <button
+                onClick={() => router.push('/educator/events')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Retour aux événements
+              </button>
+            </div>
           </div>
         </div>
       </div>

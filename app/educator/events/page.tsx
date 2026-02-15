@@ -126,6 +126,12 @@ export default function EducatorEventsPage() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Gestion des événements</h1>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <a
+                href="/admin"
+                className="w-full sm:w-auto px-4 py-3 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-center touch-manipulation min-h-[44px] flex items-center justify-center"
+              >
+                Retour au menu
+              </a>
               <button
                 onClick={() => router.push('/educator/teams')}
                 className="w-full sm:w-auto px-4 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 active:bg-gray-800 touch-manipulation min-h-[44px]"

@@ -86,15 +86,20 @@ export default function EducatorTeamsPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-bold text-gray-900">Équipes</h1>
-            <button
-              type="button"
-              onClick={() => router.push('/educator/events')}
-              className="text-sm text-blue-600 hover:text-blue-500"
-            >
-              Retour aux événements
-            </button>
+            <div className="flex gap-3">
+              <a href="/admin" className="text-sm text-blue-600 hover:text-blue-500 font-medium">
+                Retour au menu
+              </a>
+              <button
+                type="button"
+                onClick={() => router.push('/educator/events')}
+                className="text-sm text-blue-600 hover:text-blue-500"
+              >
+                Retour aux événements
+              </button>
+            </div>
           </div>
         </div>
       </div>

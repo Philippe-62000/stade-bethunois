@@ -57,7 +57,7 @@ export default function AdminPage() {
           >
             <h2 className="text-lg font-semibold text-gray-900">Liste des enfants</h2>
             <p className="mt-2 text-sm text-gray-600">
-              Voir, modifier les enfants et obtenir un lien de connexion pour les parents.
+              Créez d&apos;abord un compte parent (Créer un compte), puis ajoutez ici l&apos;enfant (nom de l&apos;enfant) relié à ce parent. Voir, modifier, lien connexion.
             </p>
           </Link>
           <Link
