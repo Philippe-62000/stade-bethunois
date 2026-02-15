@@ -18,25 +18,9 @@ interface Child {
   teamId: string;
 }
 
-interface Event {
-  _id: string;
-  type: 'training' | 'match' | 'tournament';
-  date: string;
-  time: string;
-  location: string;
-  teamId: {
-    _id: string;
-    name: string;
-    category: string;
-  };
-  selectedChildrenIds?: string[] | null;
-  isRecurring?: boolean;
-  recurringRuleId?: string | null;
-}
-
 export default function EducatorEventsPage() {
   const router = useRouter();
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [places, setPlaces] = useState<{ _id: string; name: string }[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
@@ -44,8 +28,8 @@ export default function EducatorEventsPage() {
   const [showRecurrenceForm, setShowRecurrenceForm] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDayEventsModal, setShowDayEventsModal] = useState(false);
-  const [dayEventsList, setDayEventsList] = useState<Event[]>([]);
-  const [selectedEventForDelete, setSelectedEventForDelete] = useState<Event | null>(null);
+  const [dayEventsList, setDayEventsList] = useState<CalendarEvent[]>([]);
+  const [selectedEventForDelete, setSelectedEventForDelete] = useState<CalendarEvent | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -93,7 +77,7 @@ export default function EducatorEventsPage() {
   };
 
   const handleEventClick = (event: CalendarEvent) => {
-    setSelectedEventForDelete(event as Event);
+    setSelectedEventForDelete(event);
   };
 
   const handleDeleteEvent = async (scope: 'this' | 'future') => {

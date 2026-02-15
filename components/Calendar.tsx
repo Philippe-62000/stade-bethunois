@@ -10,7 +10,7 @@ export interface CalendarEvent {
   date: string;
   time: string;
   location: string;
-  teamId?: { _id: string; name: string; category?: string };
+  teamId: { _id: string; name: string; category?: string };
   selectedChildrenIds?: string[] | null;
   isRecurring?: boolean;
   recurringRuleId?: string | null;
@@ -24,7 +24,6 @@ interface CalendarProps {
 }
 
 export default function Calendar({ events, onDateClick, onEventClick }: CalendarProps) {
-  type Event = CalendarEvent;
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const monthStart = startOfMonth(currentMonth);
