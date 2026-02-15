@@ -57,7 +57,8 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
-    const { name, teamId, birthDate } = await request.json();
+    const body = await request.json();
+    const { name, teamId, birthDate, parentId: bodyParentId } = body;
 
     if (!name || !teamId || !birthDate) {
       return NextResponse.json(
@@ -66,10 +67,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const parentId = authUser.role === 'parent' ? authUser.userId : bodyParentId;
+    if (!parentId) {
+      return NextResponse.json(
+        { error: 'parentId requis (admin doit indiquer le parent)' },
+        { status: 400 }
+      );
+    }
+
     const child = await Child.create({
       name,
       teamId,
-      parentId: authUser.role === 'parent' ? authUser.userId : request.json().parentId,
+      parentId,
       birthDate: new Date(birthDate),
     });
 
