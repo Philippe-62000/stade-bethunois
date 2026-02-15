@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function LoginByTokenPage() {
+function LoginByTokenContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
@@ -62,5 +62,19 @@ export default function LoginByTokenPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <p className="text-gray-600">Redirection...</p>
     </div>
+  );
+}
+
+export default function LoginByTokenPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <p className="text-gray-600">Chargement...</p>
+        </div>
+      }
+    >
+      <LoginByTokenContent />
+    </Suspense>
   );
 }
