@@ -102,6 +102,12 @@ export default function EducatorEventsPage() {
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Gestion des événements</h1>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <button
+                onClick={() => router.push('/educator/teams')}
+                className="w-full sm:w-auto px-4 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 active:bg-gray-800 touch-manipulation min-h-[44px]"
+              >
+                Équipes
+              </button>
+              <button
                 onClick={() => setShowRecurrenceForm(true)}
                 className="w-full sm:w-auto px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 active:bg-green-800 touch-manipulation min-h-[44px]"
               >
@@ -383,10 +389,12 @@ function CreateRecurrenceForm({
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     type: 'training' as 'training' | 'match' | 'tournament',
     dayOfWeek: '1',
     time: '18:00',
+    endTime: '',
     location: '',
     teamId: '',
     periodType: 'seasonal' as 'monthly' | 'seasonal' | 'continuous',
@@ -447,6 +455,7 @@ function CreateRecurrenceForm({
           type: formData.type,
           dayOfWeek: parseInt(formData.dayOfWeek),
           time: formData.time,
+          endTime: formData.endTime || undefined,
           location: formData.location,
           teamId: formData.teamId,
           periodType: formData.periodType,
@@ -524,7 +533,7 @@ function CreateRecurrenceForm({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Heure
+                Heure de début
               </label>
               <input
                 type="time"
@@ -534,6 +543,18 @@ function CreateRecurrenceForm({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Heure de fin (optionnel)
+            </label>
+            <input
+              type="time"
+              value={formData.endTime}
+              onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md max-w-[10rem]"
+            />
           </div>
 
           <div>
@@ -553,22 +574,36 @@ function CreateRecurrenceForm({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Équipe
             </label>
-            <select
-              value={formData.teamId}
-              onChange={(e) => {
-                setFormData({ ...formData, teamId: e.target.value, selectedChildrenIds: [] });
-                onTeamChange(e.target.value);
-              }}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Sélectionner une équipe</option>
-              {teams.map(team => (
-                <option key={team._id} value={team._id}>
-                  {team.name} ({team.category})
-                </option>
-              ))}
-            </select>
+            {teams.length === 0 ? (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-800">
+                Aucune équipe. Créez-en une dans la page{' '}
+                <button
+                  type="button"
+                  onClick={() => router.push('/educator/teams')}
+                  className="underline font-medium hover:no-underline"
+                >
+                  Équipes
+                </button>
+                .
+              </div>
+            ) : (
+              <select
+                value={formData.teamId}
+                onChange={(e) => {
+                  setFormData({ ...formData, teamId: e.target.value, selectedChildrenIds: [] });
+                  onTeamChange(e.target.value);
+                }}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="">Sélectionner une équipe</option>
+                {teams.map(team => (
+                  <option key={team._id} value={team._id}>
+                    {team.name} ({team.category})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div>
@@ -700,7 +735,7 @@ function CreateRecurrenceForm({
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || teams.length === 0}
               className="w-full sm:w-auto px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 active:bg-green-800 disabled:opacity-50 touch-manipulation min-h-[44px]"
             >
               {loading ? 'Création...' : 'Créer la récurrence'}

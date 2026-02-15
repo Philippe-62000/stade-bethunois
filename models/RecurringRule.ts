@@ -4,6 +4,7 @@ export interface IRecurringRule extends Document {
   type: 'training' | 'match' | 'tournament';
   dayOfWeek: number; // 0=dimanche, 1=lundi, etc.
   time: string; // "18:00"
+  endTime?: string; // "19:30" optionnel
   teamId: mongoose.Types.ObjectId;
   location: string;
   startDate: Date;
@@ -32,6 +33,10 @@ const RecurringRuleSchema = new Schema<IRecurringRule>(
     time: {
       type: String,
       required: true,
+    },
+    endTime: {
+      type: String,
+      required: false,
     },
     teamId: {
       type: Schema.Types.ObjectId,

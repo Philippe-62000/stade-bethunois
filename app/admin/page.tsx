@@ -52,6 +52,15 @@ export default function AdminPage() {
             </p>
           </Link>
           <Link
+            href="/educator/teams"
+            className="block p-6 bg-white rounded-lg shadow hover:shadow-md border border-gray-200"
+          >
+            <h2 className="text-lg font-semibold text-gray-900">Gérer les équipes</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Créer et gérer les équipes (U12, U15, etc.) pour les récurrences et événements.
+            </p>
+          </Link>
+          <Link
             href="/educator/events"
             className="block p-6 bg-white rounded-lg shadow hover:shadow-md border border-gray-200"
           >

@@ -4,6 +4,7 @@ export interface IEvent extends Document {
   type: 'training' | 'match' | 'tournament';
   date: Date;
   time: string;
+  endTime?: string;
   location: string;
   teamId: mongoose.Types.ObjectId;
   isRecurring: boolean;
@@ -30,6 +31,10 @@ const EventSchema = new Schema<IEvent>(
     time: {
       type: String,
       required: true,
+    },
+    endTime: {
+      type: String,
+      required: false,
     },
     location: {
       type: String,
