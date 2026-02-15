@@ -50,7 +50,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    try {
+      await connectDB();
+    } catch (dbError: any) {
+      console.error('Connexion DB:', dbError);
+      return NextResponse.json(
+        { error: process.env.MONGODB_URI ? 'Erreur de connexion à la base' : 'Configuration base de données manquante (MONGODB_URI)' },
+        { status: 500 }
+      );
+    }
 
     const {
       type,
@@ -79,13 +87,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const dates = generateEventDates({
-      dayOfWeek: parseInt(dayOfWeek),
-      time,
-      startDate: new Date(startDate),
-      endDate: endDate ? new Date(endDate) : null,
-      periodType,
-    });
+    const startDateObj = new Date(startDate);
+    const endDateObj = endDate ? new Date(endDate) : null;
+    if (isNaN(startDateObj.getTime())) {
+      return NextResponse.json(
+        { error: 'Date de début invalide' },
+        { status: 400 }
+      );
+    }
+    if (periodType === 'seasonal') {
+      if (!endDate || !endDate.trim()) {
+        return NextResponse.json(
+          { error: 'Une récurrence saisonnière doit avoir une date de fin' },
+          { status: 400 }
+        );
+      }
+      if (isNaN(endDateObj!.getTime())) {
+        return NextResponse.json(
+          { error: 'Date de fin invalide' },
+          { status: 400 }
+        );
+      }
+    }
+
+    let dates: Date[];
+    try {
+      dates = generateEventDates({
+        dayOfWeek: parseInt(dayOfWeek),
+        time,
+        startDate: startDateObj,
+        endDate: endDateObj,
+        periodType,
+      });
+    } catch (err: any) {
+      console.error('generateEventDates error:', err);
+      return NextResponse.json(
+        { error: err?.message || 'Erreur lors de la génération des dates' },
+        { status: 400 }
+      );
+    }
 
     const createdRules: any[] = [];
     let totalEventsCreated = 0;
@@ -98,8 +138,8 @@ export async function POST(request: NextRequest) {
         ...(endTime && { endTime }),
         teamId,
         location,
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
+        startDate: startDateObj,
+        endDate: endDateObj,
         periodType,
         selectedChildrenIds: selectedChildrenIds && selectedChildrenIds.length > 0 ? selectedChildrenIds : null,
       });
@@ -134,8 +174,9 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: any) {
     console.error('Erreur lors de la création de la règle:', error);
+    const message = error?.message || 'Erreur serveur';
     return NextResponse.json(
-      { error: 'Erreur serveur' },
+      { error: process.env.NODE_ENV === 'development' ? message : 'Erreur serveur' },
       { status: 500 }
     );
   }

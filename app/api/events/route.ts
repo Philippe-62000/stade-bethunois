@@ -13,7 +13,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    try {
+      await connectDB();
+    } catch (dbError: any) {
+      console.error('Connexion DB:', dbError);
+      return NextResponse.json(
+        { error: process.env.MONGODB_URI ? 'Erreur de connexion à la base' : 'Configuration base de données manquante (MONGODB_URI)' },
+        { status: 500 }
+      );
+    }
 
     const { searchParams } = new URL(request.url);
     const teamId = searchParams.get('teamId');
