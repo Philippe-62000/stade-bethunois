@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Event from '@/models/Event';
+import '@/models/Team';
+import '@/models/Child';
+import '@/models/User';
 import { getAuthUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {

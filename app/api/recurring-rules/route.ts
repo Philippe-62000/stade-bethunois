@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import RecurringRule from '@/models/RecurringRule';
 import Event from '@/models/Event';
+import '@/models/Team';
+import '@/models/Child';
+import '@/models/User';
 import { getAuthUser } from '@/lib/auth';
 import { generateEventDates } from '@/lib/recurrence';
 

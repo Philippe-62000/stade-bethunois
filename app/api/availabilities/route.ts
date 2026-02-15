@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Availability from '@/models/Availability';
 import Child from '@/models/Child';
+import '@/models/Event';
+import '@/models/User';
 import { getAuthUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
