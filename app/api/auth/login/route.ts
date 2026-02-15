@@ -17,8 +17,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Normaliser l'email (minuscules) comme en base
+    const emailNormalized = String(email).trim().toLowerCase();
+
     // Trouver l'utilisateur
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: emailNormalized });
     if (!user) {
       return NextResponse.json(
         { error: 'Email ou mot de passe incorrect' },
