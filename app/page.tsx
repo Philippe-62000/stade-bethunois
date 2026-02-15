@@ -13,20 +13,12 @@ export default function HomePage() {
             Gestion des présences
           </p>
         </div>
-        <div className="space-y-4">
-          <Link
-            href="/login"
-            className="block w-full py-3 px-4 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Se connecter
-          </Link>
-          <Link
-            href="/register"
-            className="block w-full py-3 px-4 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            S'inscrire
-          </Link>
-        </div>
+        <Link
+          href="/login"
+          className="block w-full py-3 px-4 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-center"
+        >
+          Se connecter
+        </Link>
       </div>
     </div>
   );

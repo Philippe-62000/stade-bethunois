@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -14,6 +14,24 @@ export default function RegisterPage() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+  const [firstSetup, setFirstSetup] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/auth/can-register', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.allowed) {
+          router.replace('/login');
+          return;
+        }
+        setFirstSetup(data.firstSetup === true);
+        setCheckingAccess(false);
+      })
+      .catch(() => {
+        router.replace('/login');
+      });
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +44,7 @@ export default function RegisterPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(formData),
       });
 
@@ -51,6 +70,14 @@ export default function RegisterPage() {
     }
   };
 
+  if (checkingAccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-gray-600">Vérification d&apos;accès...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
       <div className="max-w-md w-full space-y-8 bg-white p-6 md:p-8 rounded-lg shadow-md">
@@ -59,7 +86,9 @@ export default function RegisterPage() {
             Stade Béthunois
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Créez votre compte
+            {firstSetup
+              ? 'Création du premier compte administrateur'
+              : 'Créer un compte (réservé à l\'administrateur)'}
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -116,23 +145,25 @@ export default function RegisterPage() {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
             </div>
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                Rôle
-              </label>
-              <select
-                id="role"
-                name="role"
-                required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
-              >
-                <option value="parent">Parent</option>
-                <option value="educator">Éducateur</option>
-                <option value="admin">Administrateur</option>
-              </select>
-            </div>
+            {!firstSetup && (
+              <div>
+                <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+                  Rôle
+                </label>
+                <select
+                  id="role"
+                  name="role"
+                  required
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value as 'parent' | 'educator' | 'admin' })}
+                >
+                  <option value="parent">Parent</option>
+                  <option value="educator">Éducateur</option>
+                  <option value="admin">Administrateur</option>
+                </select>
+              </div>
+            )}
           </div>
 
           <div>
@@ -141,16 +172,16 @@ export default function RegisterPage() {
               disabled={loading}
               className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed active:bg-blue-800 touch-manipulation min-h-[44px]"
             >
-              {loading ? 'Inscription...' : 'S\'inscrire'}
+              {loading ? 'Création...' : firstSetup ? 'Créer le compte administrateur' : 'Créer le compte'}
             </button>
           </div>
 
           <div className="text-center">
             <Link
-              href="/login"
+              href={firstSetup ? "/login" : "/admin"}
               className="text-sm text-blue-600 hover:text-blue-500"
             >
-              Déjà un compte ? Se connecter
+              {firstSetup ? 'Déjà un compte ? Se connecter' : 'Retour à l\'administration'}
             </Link>
           </div>
         </form>

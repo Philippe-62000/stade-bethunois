@@ -1,13 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
-import { hashPassword, generateToken } from '@/lib/auth';
+import { hashPassword, generateToken, getAuthUser } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
 
+    const userCount = await User.countDocuments();
+    const authUser = getAuthUser(request);
+
+    // Seul le premier utilisateur (création initiale) ou un admin peut créer des comptes
+    if (userCount > 0 && (!authUser || authUser.role !== 'admin')) {
+      return NextResponse.json(
+        { error: 'Seul l\'administrateur peut créer des comptes. Contactez-le pour obtenir un accès.' },
+        { status: 403 }
+      );
+    }
+
     const { email, password, name, role } = await request.json();
+
+    // Lors du premier compte, forcer le rôle admin
+    const roleToUse = userCount === 0 ? 'admin' : role;
 
     // Validation
     if (!email || !password || !name || !role) {
@@ -17,7 +31,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!['parent', 'educator', 'admin'].includes(role)) {
+    if (!['parent', 'educator', 'admin'].includes(roleToUse)) {
       return NextResponse.json(
         { error: 'Rôle invalide' },
         { status: 400 }
@@ -39,7 +53,7 @@ export async function POST(request: NextRequest) {
       email,
       password: hashedPassword,
       name,
-      role,
+      role: roleToUse,
       notificationSettings: {
         enabled: true,
         reminderEnabled: true,

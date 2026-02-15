@@ -109,14 +109,9 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <div className="text-center">
-            <Link
-              href="/register"
-              className="text-sm text-blue-600 hover:text-blue-500"
-            >
-              Pas encore de compte ? S'inscrire
-            </Link>
-          </div>
+          <p className="text-center text-sm text-gray-500">
+            Pour obtenir un compte, contactez l&apos;administrateur du club.
+          </p>
         </form>
       </div>
     </div>
