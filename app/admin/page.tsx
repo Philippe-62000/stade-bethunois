@@ -52,6 +52,15 @@ export default function AdminPage() {
             </p>
           </Link>
           <Link
+            href="/admin/children"
+            className="block p-6 bg-white rounded-lg shadow hover:shadow-md border border-gray-200"
+          >
+            <h2 className="text-lg font-semibold text-gray-900">Liste des enfants</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Voir, modifier les enfants et obtenir un lien de connexion pour les parents.
+            </p>
+          </Link>
+          <Link
             href="/educator/teams"
             className="block p-6 bg-white rounded-lg shadow hover:shadow-md border border-gray-200"
           >

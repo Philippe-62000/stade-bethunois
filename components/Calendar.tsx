@@ -16,9 +16,10 @@ interface Event {
 interface CalendarProps {
   events: Event[];
   onDateClick?: (date: Date) => void;
+  onEventClick?: (event: Event) => void;
 }
 
-export default function Calendar({ events, onDateClick }: CalendarProps) {
+export default function Calendar({ events, onDateClick, onEventClick }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const monthStart = startOfMonth(currentMonth);
@@ -102,8 +103,21 @@ export default function Calendar({ events, onDateClick }: CalendarProps) {
                 {dayEvents.slice(0, 2).map(event => (
                   <div
                     key={event._id}
-                    className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${getEventTypeColor(event.type)}`}
-                    title={`${event.type} à ${event.time}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEventClick?.(event);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onEventClick?.(event);
+                      }
+                    }}
+                    className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${getEventTypeColor(event.type)} ${onEventClick ? 'cursor-pointer hover:ring-2 hover:ring-offset-1 ring-gray-400' : ''}`}
+                    title={onEventClick ? `Cliquer pour gérer : ${event.type} à ${event.time}` : `${event.type} à ${event.time}`}
                   />
                 ))}
                 {dayEvents.length > 2 && (

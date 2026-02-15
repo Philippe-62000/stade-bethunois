@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Calendar from '@/components/Calendar';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 interface Team {
@@ -30,6 +30,8 @@ interface Event {
     category: string;
   };
   selectedChildrenIds?: string[] | null;
+  isRecurring?: boolean;
+  recurringRuleId?: string | null;
 }
 
 export default function EducatorEventsPage() {
@@ -40,6 +42,9 @@ export default function EducatorEventsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showRecurrenceForm, setShowRecurrenceForm] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showDayEventsModal, setShowDayEventsModal] = useState(false);
+  const [dayEventsList, setDayEventsList] = useState<Event[]>([]);
+  const [selectedEventForDelete, setSelectedEventForDelete] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -71,7 +76,36 @@ export default function EducatorEventsPage() {
 
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
-    setShowCreateForm(true);
+    const dayEvents = events.filter(e => isSameDay(new Date(e.date), date));
+    if (dayEvents.length > 0) {
+      setDayEventsList(dayEvents);
+      setShowDayEventsModal(true);
+    } else {
+      setShowCreateForm(true);
+    }
+  };
+
+  const handleEventClick = (event: Event) => {
+    setSelectedEventForDelete(event);
+  };
+
+  const handleDeleteEvent = async (scope: 'this' | 'future') => {
+    if (!selectedEventForDelete) return;
+    try {
+      const res = await fetch(`/api/events/${selectedEventForDelete._id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ scope }),
+      });
+      if (res.ok) {
+        fetchData();
+        setSelectedEventForDelete(null);
+        setShowDayEventsModal(false);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleTeamChange = async (teamId: string) => {
@@ -125,7 +159,7 @@ export default function EducatorEventsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Calendar events={events} onDateClick={handleDateClick} />
+        <Calendar events={events} onDateClick={handleDateClick} onEventClick={handleEventClick} />
       </div>
 
       {showCreateForm && (
@@ -157,6 +191,92 @@ export default function EducatorEventsPage() {
             setShowRecurrenceForm(false);
           }}
         />
+      )}
+
+      {showDayEventsModal && selectedDate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold mb-4">
+              Événements du {format(selectedDate, 'dd MMMM yyyy', { locale: fr })}
+            </h2>
+            <ul className="space-y-2 mb-4">
+              {dayEventsList.map(ev => (
+                <li key={ev._id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDayEventsModal(false);
+                      setSelectedEventForDelete(ev);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded border border-gray-200 hover:bg-gray-50 flex justify-between items-center"
+                  >
+                    <span>
+                      {ev.type === 'training' ? 'Entraînement' : ev.type === 'match' ? 'Match' : 'Tournoi'} — {ev.time}
+                      {ev.teamId?.name && ` (${ev.teamId.name})`}
+                    </span>
+                    <span className="text-gray-500 text-sm">Supprimer</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDayEventsModal(false);
+                  setShowCreateForm(true);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Créer un événement
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDayEventsModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedEventForDelete && !showDayEventsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold mb-2">Supprimer cet événement ?</h2>
+            <p className="text-gray-600 mb-4">
+              {selectedEventForDelete.type === 'training' ? 'Entraînement' : selectedEventForDelete.type === 'match' ? 'Match' : 'Tournoi'} — {format(new Date(selectedEventForDelete.date), 'dd/MM/yyyy', { locale: fr })} à {selectedEventForDelete.time}
+              {selectedEventForDelete.teamId?.name && ` (${selectedEventForDelete.teamId.name})`}
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => handleDeleteEvent('this')}
+                className="w-full px-4 py-3 bg-amber-600 text-white rounded-md hover:bg-amber-700"
+              >
+                Effacer cette journée uniquement
+              </button>
+              {selectedEventForDelete.isRecurring && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteEvent('future')}
+                  className="w-full px-4 py-3 bg-red-600 text-white rounded-md hover:bg-red-700"
+                >
+                  Effacer toutes les récurrences à partir de cette date
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setSelectedEventForDelete(null)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
