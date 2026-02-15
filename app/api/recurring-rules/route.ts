@@ -57,7 +57,8 @@ export async function POST(request: NextRequest) {
       dayOfWeek,
       time,
       endTime,
-      teamId,
+      teamId: bodyTeamId,
+      teamIds: bodyTeamIds,
       location,
       startDate,
       endDate,
@@ -65,28 +66,19 @@ export async function POST(request: NextRequest) {
       selectedChildrenIds,
     } = await request.json();
 
-    if (!type || dayOfWeek === undefined || !time || !teamId || !location || !startDate || !periodType) {
+    const teamIdsArray = Array.isArray(bodyTeamIds) && bodyTeamIds.length > 0
+      ? bodyTeamIds
+      : bodyTeamId
+        ? [bodyTeamId]
+        : [];
+
+    if (!type || dayOfWeek === undefined || !time || !location || !startDate || !periodType || teamIdsArray.length === 0) {
       return NextResponse.json(
-        { error: 'Tous les champs requis sont manquants' },
+        { error: 'Tous les champs requis sont manquants (dont au moins une équipe)' },
         { status: 400 }
       );
     }
 
-    // Créer la règle de récurrence
-    const rule = await RecurringRule.create({
-      type,
-      dayOfWeek: parseInt(dayOfWeek),
-      time,
-      ...(endTime && { endTime }),
-      teamId,
-      location,
-      startDate: new Date(startDate),
-      endDate: endDate ? new Date(endDate) : null,
-      periodType,
-      selectedChildrenIds: selectedChildrenIds && selectedChildrenIds.length > 0 ? selectedChildrenIds : null,
-    });
-
-    // Générer les événements
     const dates = generateEventDates({
       dayOfWeek: parseInt(dayOfWeek),
       time,
@@ -95,30 +87,49 @@ export async function POST(request: NextRequest) {
       periodType,
     });
 
-    // Créer les événements
-    const events = dates.map(date => ({
-      type,
-      date,
-      time,
-      ...(endTime && { endTime }),
-      location,
-      teamId,
-      isRecurring: true,
-      recurringRuleId: rule._id,
-      isException: false,
-      isCustom: false,
-      selectedChildrenIds: selectedChildrenIds && selectedChildrenIds.length > 0 ? selectedChildrenIds : null,
-      createdBy: authUser.userId,
-    }));
+    const createdRules: any[] = [];
+    let totalEventsCreated = 0;
 
-    await Event.insertMany(events);
+    for (const teamId of teamIdsArray) {
+      const rule = await RecurringRule.create({
+        type,
+        dayOfWeek: parseInt(dayOfWeek),
+        time,
+        ...(endTime && { endTime }),
+        teamId,
+        location,
+        startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : null,
+        periodType,
+        selectedChildrenIds: selectedChildrenIds && selectedChildrenIds.length > 0 ? selectedChildrenIds : null,
+      });
 
-    const populatedRule = await RecurringRule.findById(rule._id)
-      .populate('teamId', 'name category')
-      .populate('selectedChildrenIds', 'name');
+      const events = dates.map(date => ({
+        type,
+        date,
+        time,
+        ...(endTime && { endTime }),
+        location,
+        teamId,
+        isRecurring: true,
+        recurringRuleId: rule._id,
+        isException: false,
+        isCustom: false,
+        selectedChildrenIds: selectedChildrenIds && selectedChildrenIds.length > 0 ? selectedChildrenIds : null,
+        createdBy: authUser.userId,
+      }));
+
+      await Event.insertMany(events);
+      totalEventsCreated += events.length;
+
+      const populatedRule = await RecurringRule.findById(rule._id)
+        .populate('teamId', 'name category')
+        .populate('selectedChildrenIds', 'name');
+      createdRules.push(populatedRule);
+    }
 
     return NextResponse.json(
-      { rule: populatedRule, eventsCreated: events.length },
+      { rules: createdRules, eventsCreated: totalEventsCreated },
       { status: 201 }
     );
   } catch (error: any) {

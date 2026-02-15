@@ -38,6 +38,7 @@ export default function EducatorEventsPage() {
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [places, setPlaces] = useState<{ _id: string; name: string }[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showRecurrenceForm, setShowRecurrenceForm] = useState(false);
@@ -53,9 +54,10 @@ export default function EducatorEventsPage() {
 
   const fetchData = async () => {
     try {
-      const [eventsRes, teamsRes] = await Promise.all([
+      const [eventsRes, teamsRes, placesRes] = await Promise.all([
         fetch('/api/events'),
         fetch('/api/teams'),
+        fetch('/api/places'),
       ]);
 
       if (eventsRes.ok) {
@@ -66,6 +68,11 @@ export default function EducatorEventsPage() {
       if (teamsRes.ok) {
         const teamsData = await teamsRes.json();
         setTeams(teamsData.teams || []);
+      }
+
+      if (placesRes.ok) {
+        const placesData = await placesRes.json();
+        setPlaces(placesData.places || []);
       }
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
@@ -183,6 +190,7 @@ export default function EducatorEventsPage() {
       {showRecurrenceForm && (
         <CreateRecurrenceForm
           teams={teams}
+          places={places}
           children={children}
           onTeamChange={handleTeamChange}
           onClose={() => setShowRecurrenceForm(false)}
@@ -498,12 +506,14 @@ function CreateEventForm({
 
 function CreateRecurrenceForm({
   teams,
+  places,
   children,
   onTeamChange,
   onClose,
   onSuccess,
 }: {
   teams: Team[];
+  places: { _id: string; name: string }[];
   children: Child[];
   onTeamChange: (teamId: string) => void;
   onClose: () => void;
@@ -516,7 +526,8 @@ function CreateRecurrenceForm({
     time: '18:00',
     endTime: '',
     location: '',
-    teamId: '',
+    teamIds: [] as string[],
+    selectAllTeams: false,
     periodType: 'seasonal' as 'monthly' | 'seasonal' | 'continuous',
     startDate: '',
     endDate: '',
@@ -543,6 +554,13 @@ function CreateRecurrenceForm({
     }));
   }, []);
 
+  // Charger les enfants quand une seule équipe est sélectionnée
+  useEffect(() => {
+    if (formData.teamIds.length === 1 && !formData.selectAllTeams) {
+      onTeamChange(formData.teamIds[0]);
+    }
+  }, [formData.teamIds, formData.selectAllTeams]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -566,6 +584,20 @@ function CreateRecurrenceForm({
         endDate = '';
       }
 
+      const teamIdsToSend = formData.selectAllTeams
+        ? teams.map((t) => t._id)
+        : formData.teamIds;
+      if (teamIdsToSend.length === 0) {
+        setError('Sélectionnez au moins une équipe.');
+        setLoading(false);
+        return;
+      }
+      if (!formData.location.trim()) {
+        setError('Sélectionnez ou saisissez un lieu.');
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch('/api/recurring-rules', {
         method: 'POST',
         headers: {
@@ -576,12 +608,15 @@ function CreateRecurrenceForm({
           dayOfWeek: parseInt(formData.dayOfWeek),
           time: formData.time,
           endTime: formData.endTime || undefined,
-          location: formData.location,
-          teamId: formData.teamId,
+          location: formData.location.trim(),
+          teamIds: teamIdsToSend,
           periodType: formData.periodType,
           startDate,
           endDate: endDate || null,
-          selectedChildrenIds: formData.selectAll ? null : formData.selectedChildrenIds,
+          selectedChildrenIds:
+            teamIdsToSend.length === 1 && !formData.selectAll
+              ? formData.selectedChildrenIds
+              : null,
         }),
       });
 
@@ -681,18 +716,47 @@ function CreateRecurrenceForm({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Lieu
             </label>
-            <input
-              type="text"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            />
+            {places.length === 0 ? (
+              <div className="space-y-2">
+                <p className="text-amber-700 text-sm">
+                  Aucun lieu défini. Définissez des lieux dans{' '}
+                  <button
+                    type="button"
+                    onClick={() => router.push('/admin/settings')}
+                    className="underline font-medium hover:no-underline"
+                  >
+                    Paramètres
+                  </button>
+                  , ou saisissez ci-dessous :
+                </p>
+                <input
+                  type="text"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  placeholder="Ex. Terrain 1, 8 Ter"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
+              </div>
+            ) : (
+              <select
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="">Choisir un lieu</option>
+                {places.map((place) => (
+                  <option key={place._id} value={place.name}>
+                    {place.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Équipe
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Équipe(s)
             </label>
             {teams.length === 0 ? (
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-800">
@@ -707,22 +771,58 @@ function CreateRecurrenceForm({
                 .
               </div>
             ) : (
-              <select
-                value={formData.teamId}
-                onChange={(e) => {
-                  setFormData({ ...formData, teamId: e.target.value, selectedChildrenIds: [] });
-                  onTeamChange(e.target.value);
-                }}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="">Sélectionner une équipe</option>
-                {teams.map(team => (
-                  <option key={team._id} value={team._id}>
-                    {team.name} ({team.category})
-                  </option>
-                ))}
-              </select>
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.selectAllTeams}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setFormData({
+                        ...formData,
+                        selectAllTeams: checked,
+                        teamIds: checked ? teams.map((t) => t._id) : [],
+                        selectedChildrenIds: [],
+                      });
+                    }}
+                    className="mr-2"
+                  />
+                  <span className="text-sm font-medium">Toutes les équipes</span>
+                </label>
+                {!formData.selectAllTeams && (
+                  <div className="border border-gray-300 rounded-md p-3 max-h-48 overflow-y-auto">
+                    {teams.map((team) => (
+                      <label key={team._id} className="flex items-center mb-2">
+                        <input
+                          type="checkbox"
+                          checked={formData.teamIds.includes(team._id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const next = [...formData.teamIds, team._id];
+                              setFormData({
+                                ...formData,
+                                teamIds: next,
+                                selectedChildrenIds: next.length === 1 ? formData.selectedChildrenIds : [],
+                              });
+                              if (next.length === 1) onTeamChange(next[0]);
+                            } else {
+                              const next = formData.teamIds.filter((id) => id !== team._id);
+                              setFormData({
+                                ...formData,
+                                teamIds: next,
+                                selectedChildrenIds: next.length === 1 ? formData.selectedChildrenIds : [],
+                              });
+                              if (next.length === 1) onTeamChange(next[0]);
+                            }
+                          }}
+                          className="mr-2"
+                        />
+                        <span className="text-sm">{team.name} ({team.category})</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -799,7 +899,7 @@ function CreateRecurrenceForm({
             </div>
           </div>
 
-          {formData.teamId && children.length > 0 && (
+          {formData.teamIds.length === 1 && !formData.selectAllTeams && children.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Joueurs concernés
@@ -812,7 +912,7 @@ function CreateRecurrenceForm({
                     onChange={(e) => setFormData({ ...formData, selectAll: e.target.checked, selectedChildrenIds: [] })}
                     className="mr-2"
                   />
-                  <span className="text-sm">Tous les joueurs de l'équipe</span>
+                  <span className="text-sm">Tous les joueurs de l&apos;équipe</span>
                 </label>
               </div>
               {!formData.selectAll && (
@@ -855,7 +955,12 @@ function CreateRecurrenceForm({
             </button>
             <button
               type="submit"
-              disabled={loading || teams.length === 0}
+              disabled={
+                loading ||
+                teams.length === 0 ||
+                (!formData.selectAllTeams && formData.teamIds.length === 0) ||
+                !formData.location.trim()
+              }
               className="w-full sm:w-auto px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 active:bg-green-800 disabled:opacity-50 touch-manipulation min-h-[44px]"
             >
               {loading ? 'Création...' : 'Créer la récurrence'}

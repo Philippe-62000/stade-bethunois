@@ -78,6 +78,15 @@ export default function AdminPage() {
               Créer des entraînements, matchs et tournois.
             </p>
           </Link>
+          <Link
+            href="/admin/settings"
+            className="block p-6 bg-white rounded-lg shadow hover:shadow-md border border-gray-200"
+          >
+            <h2 className="text-lg font-semibold text-gray-900">Paramètres</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Définir les lieux proposés pour les récurrences et événements.
+            </p>
+          </Link>
         </div>
       </div>
     </div>
