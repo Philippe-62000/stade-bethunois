@@ -114,24 +114,54 @@ export default function AdminChildrenPage() {
               const config = await configRes.json();
               
               if (config.serviceId && config.templateIdLoginCode && config.publicKey) {
-                await emailjs.send(
+                // Initialiser EmailJS avec la clé publique (une seule fois)
+                if (!emailjs.init) {
+                  emailjs.init(config.publicKey);
+                }
+                
+                // Préparer les paramètres du template
+                const templateParams = {
+                  parent_name: data.parentName || '',
+                  site_url: data.siteUrl || '',
+                  login_code: data.code || '',
+                  to_email: data.parentEmail || '',
+                  reply_to: data.parentEmail || '',
+                };
+                
+                console.log('Envoi EmailJS avec:', {
+                  serviceId: config.serviceId,
+                  templateId: config.templateIdLoginCode,
+                  templateParams,
+                });
+                
+                // Envoyer l'email avec les paramètres du template
+                const result = await emailjs.send(
                   config.serviceId,
                   config.templateIdLoginCode,
-                  {
-                    parent_name: data.parentName,
-                    site_url: data.siteUrl,
-                    login_code: data.code,
-                    to_email: data.parentEmail,
-                  },
+                  templateParams,
                   config.publicKey
                 );
-                alert(`Email envoyé à ${parentEmail}`);
+                
+                console.log('Résultat EmailJS:', result);
+                
+                if (result.status === 200 || result.text === 'OK') {
+                  alert(`Email envoyé à ${parentEmail}`);
+                } else {
+                  throw new Error(result.text || `Erreur ${result.status || 'inconnue'}`);
+                }
               } else {
                 alert('Configuration EmailJS manquante. Veuillez configurer les variables d\'environnement EmailJS.');
               }
-            } catch (emailError) {
+            } catch (emailError: any) {
               console.error('Erreur envoi email:', emailError);
-              alert('Erreur lors de l\'envoi de l\'email. Veuillez vérifier la configuration EmailJS.');
+              const errorMessage = emailError?.text || emailError?.message || emailError?.toString() || 'Erreur inconnue';
+              console.error('Détails erreur:', {
+                status: emailError?.status,
+                text: emailError?.text,
+                message: emailError?.message,
+                error: emailError,
+              });
+              alert(`Erreur lors de l'envoi de l'email: ${errorMessage}\n\nVérifiez que le template EmailJS utilise les variables: parent_name, site_url, login_code, to_email.`);
             }
           }
         } else {
