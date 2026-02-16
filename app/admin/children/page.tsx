@@ -148,6 +148,10 @@ export default function AdminChildrenPage() {
     <p style="font-size: 14px; color: #666;">
       Si vous n'avez pas demandé ce code, vous pouvez ignorer cet email.
     </p>
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+    <p style="font-size: 12px; color: #999; text-align: center; margin-top: 20px;">
+      Cette adresse n'est utilisée que pour envoyer des emails dans le cadre de ce site, la boite mail n'est pas consultée, si vous souhaitez écrire au club merci d'utiliser l'adresse habituelle.
+    </p>
   </div>
 </body>
 </html>

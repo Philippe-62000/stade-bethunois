@@ -1,18 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
+import '@/models/User';
 import User from '@/models/User';
+import '@/models/LoginToken';
+import LoginToken from '@/models/LoginToken';
 import { comparePassword, generateToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
 
-    const { email, password } = await request.json();
+    const { email, password, code } = await request.json();
 
     // Validation
-    if (!email || !password) {
+    if (!email) {
       return NextResponse.json(
-        { error: 'Email et mot de passe requis' },
+        { error: 'Email requis' },
+        { status: 400 }
+      );
+    }
+
+    if (!password && !code) {
+      return NextResponse.json(
+        { error: 'Mot de passe ou code requis' },
         { status: 400 }
       );
     }
@@ -29,13 +39,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier le mot de passe
-    const isPasswordValid = await comparePassword(password, user.password);
-    if (!isPasswordValid) {
-      return NextResponse.json(
-        { error: 'Email ou mot de passe incorrect' },
-        { status: 401 }
-      );
+    // Si un code est fourni, vérifier le code de connexion
+    if (code) {
+      const loginToken = await LoginToken.findOne({
+        userId: user._id,
+        token: code.toString().trim(),
+      });
+
+      if (!loginToken) {
+        return NextResponse.json(
+          { error: 'Code de connexion incorrect' },
+          { status: 401 }
+        );
+      }
+
+      // Vérifier l'expiration (même si très lointaine)
+      if (new Date() > loginToken.expiresAt) {
+        await LoginToken.deleteOne({ _id: loginToken._id });
+        return NextResponse.json(
+          { error: 'Code de connexion expiré' },
+          { status: 401 }
+        );
+      }
+
+      // Le code est valide, on peut supprimer le token (usage unique) ou le laisser pour réutilisation
+      // Pour l'instant, on le laisse pour permettre plusieurs connexions avec le même code
+    } else {
+      // Vérifier le mot de passe si aucun code n'est fourni
+      const isPasswordValid = await comparePassword(password, user.password);
+      if (!isPasswordValid) {
+        return NextResponse.json(
+          { error: 'Email ou mot de passe incorrect' },
+          { status: 401 }
+        );
+      }
     }
 
     // Générer le token
