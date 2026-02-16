@@ -96,6 +96,15 @@ export default function AdminPage() {
               Définir les lieux proposés pour les récurrences et événements.
             </p>
           </Link>
+          <Link
+            href="/admin/change-password"
+            className="block p-6 bg-white rounded-lg shadow hover:shadow-md border border-gray-200"
+          >
+            <h2 className="text-lg font-semibold text-gray-900">Changer le mot de passe</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Modifier votre mot de passe de connexion.
+            </p>
+          </Link>
         </div>
       </div>
     </div>
