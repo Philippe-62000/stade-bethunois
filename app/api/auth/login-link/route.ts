@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongodb';
 import LoginToken from '@/models/LoginToken';
 import User from '@/models/User';
 import { getAuthUser } from '@/lib/auth';
+import { sendLoginCodeEmailToParent } from '@/lib/emailjs';
 import crypto from 'crypto';
 
 const TOKEN_VALIDITY_HOURS = 24;
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { parentId } = await request.json();
+    const { parentId, sendEmail: shouldSendEmail } = await request.json();
     if (!parentId) {
       return NextResponse.json(
         { error: 'parentId requis' },
@@ -42,19 +43,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + TOKEN_VALIDITY_HOURS * 60 * 60 * 1000);
+    // Générer un code provisoire (6 chiffres) sans expiration
+    const loginCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Créer un token avec expiration très lointaine (100 ans) pour le code provisoire
+    const expiresAt = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000);
 
     await LoginToken.create({
       userId: parentId,
-      token,
+      token: loginCode,
       expiresAt,
     });
 
     const baseUrl = process.env.NEXTAUTH_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    const url = `${baseUrl}/login-by-token?token=${token}`;
+    const url = `${baseUrl}/login-by-token?token=${loginCode}`;
 
-    return NextResponse.json({ url, expiresAt });
+    // Envoyer l'email si demandé
+    if (shouldSendEmail) {
+      try {
+        await sendLoginCodeEmailToParent({
+          parent_name: parent.name,
+          site_url: baseUrl,
+          login_code: loginCode,
+        });
+      } catch (emailError) {
+        console.error('Erreur lors de l\'envoi de l\'email:', emailError);
+        // Ne pas faire échouer la requête si l'email échoue
+      }
+    }
+
+    return NextResponse.json({ 
+      url, 
+      code: loginCode,
+      expiresAt,
+      emailSent: shouldSendEmail || false
+    });
   } catch (error: any) {
     console.error('Erreur lors de la création du lien:', error);
     return NextResponse.json(

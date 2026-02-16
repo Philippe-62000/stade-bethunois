@@ -88,24 +88,32 @@ export default function AdminChildrenPage() {
       return;
     }
 
-    try {
-      const res = await fetch('/api/auth/login-link', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ parentId }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const parentName = parentNumber === 1
-          ? (typeof child.parentId === 'object' ? child.parentId.name : 'Parent 1')
-          : (child.parentId2 && typeof child.parentId2 === 'object' ? child.parentId2.name : 'Parent 2');
-        setLinkModal({ url: data.url, childName: child.name, parentName });
-      } else {
-        alert(data.error || 'Erreur');
+    const parentName = parentNumber === 1
+      ? (typeof child.parentId === 'object' ? child.parentId.name : 'Parent 1')
+      : (child.parentId2 && typeof child.parentId2 === 'object' ? child.parentId2.name : 'Parent 2');
+    const parentEmail = parentNumber === 1
+      ? (typeof child.parentId === 'object' ? child.parentId.email : '')
+      : (child.parentId2 && typeof child.parentId2 === 'object' ? child.parentId2.email : '');
+
+    // Demander confirmation pour envoyer l'email
+    if (confirm(`Envoyer un email à ${parentName} (${parentEmail}) avec le code de connexion ?`)) {
+      try {
+        const res = await fetch('/api/auth/login-link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ parentId, sendEmail: true }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(`Email envoyé à ${parentEmail} avec le code de connexion: ${data.code}`);
+          setLinkModal({ url: data.url, childName: child.name, parentName });
+        } else {
+          alert(data.error || 'Erreur');
+        }
+      } catch (e) {
+        alert('Erreur');
       }
-    } catch (e) {
-      alert('Erreur');
     }
   };
 
