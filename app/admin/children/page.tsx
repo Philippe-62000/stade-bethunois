@@ -114,6 +114,12 @@ export default function AdminChildrenPage() {
               const config = await configRes.json();
               
               if (config.serviceId && config.templateIdLoginCode && config.publicKey) {
+                // Vérifier que l'email du parent est bien défini
+                if (!data.parentEmail || data.parentEmail.trim() === '') {
+                  alert('Erreur : l\'adresse email du parent est vide');
+                  return;
+                }
+
                 // Générer le HTML complet pour le template EmailJS
                 const htmlMessage = `
 <!DOCTYPE html>
@@ -147,18 +153,24 @@ export default function AdminChildrenPage() {
 </html>
                 `.trim();
                 
-                // Préparer les paramètres du template
+                // Préparer les paramètres du template avec toutes les variables possibles pour le destinataire
                 const templateParams = {
                   html_message: htmlMessage,
-                  to_email: data.parentEmail || '',
-                  reply_to: data.parentEmail || '',
+                  to_email: data.parentEmail.trim(),
+                  user_email: data.parentEmail.trim(), // Alternative pour certains services EmailJS
+                  to_name: data.parentName || '',
+                  reply_to: data.parentEmail.trim(),
                   subject: 'Code de connexion - Stade Béthunois',
+                  parent_name: data.parentName || '',
+                  site_url: data.siteUrl || '',
+                  login_code: data.code || '',
                 };
                 
                 console.log('Envoi EmailJS avec:', {
                   serviceId: config.serviceId,
                   templateId: config.templateIdLoginCode,
                   to_email: data.parentEmail,
+                  templateParams: { ...templateParams, html_message: '[HTML...]' }, // Ne pas logger tout le HTML
                 });
                 
                 // Envoyer l'email avec les paramètres du template
