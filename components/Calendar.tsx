@@ -106,7 +106,7 @@ export default function Calendar({ events, availabilities = [], onDateClick, onE
           </button>
           <button
             onClick={handleMonthClick}
-            className={`text-xl font-bold px-3 py-1 rounded-md ${showMonthActions || onMonthClick ? 'hover:bg-gray-100 cursor-pointer' : ''}`}
+            className={`text-xl font-bold px-3 py-1 rounded-md ${showMonthActions || onMonthAction ? 'hover:bg-gray-100 cursor-pointer' : ''}`}
           >
             {format(currentMonth, 'MMMM yyyy', { locale: fr })}
           </button>
