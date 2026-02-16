@@ -46,6 +46,7 @@ export default function ParentCalendarPage() {
   const [availabilities, setAvailabilities] = useState<Availability[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedEvents, setSelectedEvents] = useState<Event[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -67,7 +68,12 @@ export default function ParentCalendarPage() {
 
       if (childrenRes.ok) {
         const childrenData = await childrenRes.json();
-        setChildren(childrenData.children || []);
+        const childrenList = childrenData.children || [];
+        setChildren(childrenList);
+        // Sélectionner le premier enfant par défaut
+        if (childrenList.length > 0 && !selectedChildId) {
+          setSelectedChildId(childrenList[0]._id);
+        }
       }
 
       if (availabilitiesRes.ok) {
@@ -83,14 +89,16 @@ export default function ParentCalendarPage() {
 
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
-    const dayEvents = events.filter(event => {
+    const dayEvents = filteredEvents.filter(event => {
       const eventDate = new Date(event.date);
       return eventDate.toDateString() === date.toDateString();
     });
     setSelectedEvents(dayEvents);
   };
 
-  const handleAvailabilityChange = async (eventId: string, childId: string, status: 'present' | 'absent') => {
+  const handleAvailabilityChange = async (eventId: string, status: 'present' | 'absent') => {
+    if (!selectedChildId) return;
+    const childId = selectedChildId;
     try {
       const response = await fetch('/api/availabilities', {
         method: 'POST',
@@ -113,44 +121,38 @@ export default function ParentCalendarPage() {
   };
 
   const handleMonthAction = async (month: Date, status: 'present' | 'absent') => {
+    if (!selectedChildId) return;
+    
     const monthStart = startOfMonth(month);
     const monthEnd = endOfMonth(month);
     
-    const monthEvents = events.filter(event => {
+    const monthEvents = filteredEvents.filter(event => {
       const eventDate = new Date(event.date);
       return isSameMonth(eventDate, month) && eventDate >= monthStart && eventDate <= monthEnd;
     });
 
-    const relevantChildren = children.filter(child => {
-      return monthEvents.some(event => {
-        if (event.selectedChildrenIds && event.selectedChildrenIds.length > 0) {
-          return event.selectedChildrenIds.includes(child._id);
-        }
-        return child.teamId.name === event.teamId.name;
-      });
-    });
+    const selectedChild = children.find(c => c._id === selectedChildId);
+    if (!selectedChild) return;
 
     try {
       const promises = [];
       for (const event of monthEvents) {
-        for (const child of relevantChildren) {
-          const isRelevant = event.selectedChildrenIds && event.selectedChildrenIds.length > 0
-            ? event.selectedChildrenIds.includes(child._id)
-            : child.teamId.name === event.teamId.name;
-          
-          if (isRelevant) {
-            promises.push(
-              fetch('/api/availabilities', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  eventId: event._id,
-                  childId: child._id,
-                  status,
-                }),
-              })
-            );
-          }
+        const isRelevant = event.selectedChildrenIds && event.selectedChildrenIds.length > 0
+          ? event.selectedChildrenIds.includes(selectedChildId)
+          : selectedChild.teamId.name === event.teamId.name;
+        
+        if (isRelevant) {
+          promises.push(
+            fetch('/api/availabilities', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                eventId: event._id,
+                childId: selectedChildId,
+                status,
+              }),
+            })
+          );
         }
       }
       await Promise.all(promises);
@@ -160,11 +162,31 @@ export default function ParentCalendarPage() {
     }
   };
 
-  const availabilitiesForCalendar = availabilities.map(av => ({
+  // Filtrer les événements et disponibilités selon l'enfant sélectionné
+  const filteredEvents = selectedChildId
+    ? events.filter(event => {
+        if (event.selectedChildrenIds && event.selectedChildrenIds.length > 0) {
+          return event.selectedChildrenIds.includes(selectedChildId);
+        }
+        const child = children.find(c => c._id === selectedChildId);
+        return child && child.teamId.name === event.teamId.name;
+      })
+    : events;
+
+  const filteredAvailabilities = selectedChildId
+    ? availabilities.filter(av => {
+        const childId = typeof av.childId === 'object' ? av.childId._id : av.childId;
+        return childId === selectedChildId;
+      })
+    : availabilities;
+
+  const availabilitiesForCalendar = filteredAvailabilities.map(av => ({
     eventId: typeof av.eventId === 'object' ? av.eventId._id : av.eventId,
     childId: typeof av.childId === 'object' ? av.childId._id : av.childId,
     status: av.status,
   }));
+
+  const selectedChild = children.find(c => c._id === selectedChildId);
 
   const getEventTypeLabel = (type: string) => {
     switch (type) {
@@ -204,10 +226,36 @@ export default function ParentCalendarPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 md:py-8">
+        {children.length > 0 && (
+          <div className="mb-4 bg-white rounded-lg shadow-md p-4">
+            {children.length === 1 ? (
+              <div className="text-lg font-semibold text-gray-900">
+                Planning de {selectedChild?.name || children[0].name}
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sélectionner un enfant
+                </label>
+                <select
+                  value={selectedChildId || ''}
+                  onChange={(e) => setSelectedChildId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {children.map(child => (
+                    <option key={child._id} value={child._id}>
+                      {child.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           <div className="lg:col-span-2 order-2 lg:order-1">
             <Calendar
-              events={events}
+              events={filteredEvents}
               availabilities={availabilitiesForCalendar}
               onDateClick={handleDateClick}
               onMonthAction={handleMonthAction}
@@ -224,11 +272,20 @@ export default function ParentCalendarPage() {
                 {selectedEvents.length > 0 ? (
                   <div className="space-y-4">
                     {selectedEvents.map(event => {
-                      const relevantChildren = children.filter(child => {
-                        if (event.selectedChildrenIds && event.selectedChildrenIds.length > 0) {
-                          return event.selectedChildrenIds.includes(child._id);
-                        }
-                        return child.teamId.name === event.teamId.name;
+                      if (!selectedChildId) return null;
+                      const selectedChild = children.find(c => c._id === selectedChildId);
+                      if (!selectedChild) return null;
+                      
+                      const isRelevant = event.selectedChildrenIds && event.selectedChildrenIds.length > 0
+                        ? event.selectedChildrenIds.includes(selectedChildId)
+                        : selectedChild.teamId.name === event.teamId.name;
+                      
+                      if (!isRelevant) return null;
+
+                      const availability = availabilities.find(av => {
+                        const avEventId = typeof av.eventId === 'object' ? av.eventId._id : av.eventId;
+                        const avChildId = typeof av.childId === 'object' ? av.childId._id : av.childId;
+                        return avEventId === event._id && avChildId === selectedChildId;
                       });
 
                       return (
@@ -241,25 +298,31 @@ export default function ParentCalendarPage() {
                               {event.time} - {event.location}
                             </p>
                           </div>
-                          {relevantChildren.map(child => (
-                            <div key={child._id} className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                              <span className="text-sm font-medium">{child.name}</span>
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => handleAvailabilityChange(event._id, child._id, 'present')}
-                                  className="flex-1 sm:flex-none px-4 py-2 text-sm bg-green-100 text-green-800 rounded-md hover:bg-green-200 active:bg-green-300 touch-manipulation min-h-[44px]"
-                                >
-                                  Présent
-                                </button>
-                                <button
-                                  onClick={() => handleAvailabilityChange(event._id, child._id, 'absent')}
-                                  className="flex-1 sm:flex-none px-4 py-2 text-sm bg-red-100 text-red-800 rounded-md hover:bg-red-200 active:bg-red-300 touch-manipulation min-h-[44px]"
-                                >
-                                  Absent
-                                </button>
-                              </div>
+                          <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <span className="text-sm font-medium">{selectedChild.name}</span>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleAvailabilityChange(event._id, 'present')}
+                                className={`flex-1 sm:flex-none px-4 py-2 text-sm rounded-md hover:opacity-90 active:opacity-80 touch-manipulation min-h-[44px] ${
+                                  availability?.status === 'present'
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-green-100 text-green-800 hover:bg-green-200'
+                                }`}
+                              >
+                                Présent
+                              </button>
+                              <button
+                                onClick={() => handleAvailabilityChange(event._id, 'absent')}
+                                className={`flex-1 sm:flex-none px-4 py-2 text-sm rounded-md hover:opacity-90 active:opacity-80 touch-manipulation min-h-[44px] ${
+                                  availability?.status === 'absent'
+                                    ? 'bg-red-600 text-white'
+                                    : 'bg-red-100 text-red-800 hover:bg-red-200'
+                                }`}
+                              >
+                                Absent
+                              </button>
                             </div>
-                          ))}
+                          </div>
                         </div>
                       );
                     })}

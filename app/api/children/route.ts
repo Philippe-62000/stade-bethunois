@@ -21,7 +21,12 @@ export async function GET(request: NextRequest) {
     
     // Les parents voient uniquement leurs enfants
     if (authUser.role === 'parent') {
-      query = { parentId: authUser.userId };
+      query = {
+        $or: [
+          { parentId: authUser.userId },
+          { parentId2: authUser.userId }
+        ]
+      };
     }
     // Les éducateurs voient les enfants de leurs équipes
     else if (authUser.role === 'educator') {
@@ -35,6 +40,7 @@ export async function GET(request: NextRequest) {
 
     const children = await Child.find(query)
       .populate('parentId', 'name email')
+      .populate('parentId2', 'name email')
       .populate('teamId', 'name category');
     
     return NextResponse.json({ children });
@@ -60,7 +66,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { name, teamId, birthDate, parentId: bodyParentId } = body;
+    const { name, teamId, birthDate, parentId: bodyParentId, parentId2: bodyParentId2 } = body;
 
     if (!name || !teamId || !birthDate) {
       return NextResponse.json(
@@ -77,15 +83,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const child = await Child.create({
+    const childData: any = {
       name,
       teamId,
       parentId,
       birthDate: new Date(birthDate),
-    });
+    };
+
+    if (bodyParentId2) {
+      childData.parentId2 = bodyParentId2;
+    }
+
+    const child = await Child.create(childData);
 
     const populatedChild = await Child.findById(child._id)
       .populate('parentId', 'name email')
+      .populate('parentId2', 'name email')
       .populate('teamId', 'name category');
 
     return NextResponse.json({ child: populatedChild }, { status: 201 });

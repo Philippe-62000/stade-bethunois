@@ -3,6 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IChild extends Document {
   name: string;
   parentId: mongoose.Types.ObjectId;
+  parentId2?: mongoose.Types.ObjectId;
   teamId: mongoose.Types.ObjectId;
   birthDate: Date;
   createdAt: Date;
@@ -19,6 +20,11 @@ const ChildSchema = new Schema<IChild>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+    },
+    parentId2: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: false,
     },
     teamId: {
       type: Schema.Types.ObjectId,

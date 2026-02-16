@@ -274,13 +274,24 @@ export default function EducatorAvailabilitiesPage() {
                   </div>
                 </div>
 
-                <div ref={printRef}>
+                <div ref={printRef} className="print:p-8 print:max-w-4xl print:mx-auto">
+                  <style jsx>{`
+                    @media print {
+                      @page {
+                        margin: 2cm;
+                      }
+                      body {
+                        margin: 0;
+                        padding: 0;
+                      }
+                    }
+                  `}</style>
                   <div className="mb-4 print:hidden">
                     <h3 className="text-lg font-semibold">Liste des joueurs</h3>
                   </div>
-                  <div className="print:block hidden print:mb-4">
-                    <h3 className="text-lg font-semibold mb-2">Liste des joueurs</h3>
-                    <div className="text-sm text-gray-600 mb-4">
+                  <div className="print:block hidden print:mb-6 print:text-center">
+                    <h3 className="text-xl font-bold mb-4">Liste des joueurs</h3>
+                    <div className="text-sm text-gray-600 mb-4 space-y-1">
                       <p><strong>Date:</strong> {format(new Date(selectedEvent.date), 'EEEE d MMMM yyyy', { locale: fr })}</p>
                       <p><strong>Heure:</strong> {selectedEvent.time}</p>
                       <p><strong>Lieu:</strong> {selectedEvent.location}</p>
@@ -289,32 +300,35 @@ export default function EducatorAvailabilitiesPage() {
                         <p><strong>Filtre:</strong> {uniqueTeams.find(t => t.name === selectedTeamFilter)?.name}</p>
                       )}
                     </div>
+                    <div className="text-lg font-semibold mb-4 pt-4 border-t">
+                      Total des enfants présents : {presentCount}
+                    </div>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 print:space-y-1">
                     {filteredAvailabilities.length > 0 ? (
                       filteredAvailabilities.map(availability => {
                         const statusInfo = getStatusLabel(availability.status);
                         return (
                           <div
                             key={availability._id}
-                            className="flex items-center justify-between p-3 border border-gray-200 rounded-md"
+                            className="flex items-center justify-between p-3 border border-gray-200 rounded-md print:p-2 print:border-b print:border-gray-300 print:rounded-none"
                           >
-                            <div>
-                              <div className="font-medium">{availability.childId.name}</div>
+                            <div className="print:flex-1">
+                              <div className="font-medium print:text-base">{availability.childId.name}</div>
                               {availability.comment && (
-                                <div className="text-sm text-gray-500 mt-1">
+                                <div className="text-sm text-gray-500 mt-1 print:text-xs">
                                   {availability.comment}
                                 </div>
                               )}
                             </div>
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusInfo.color}`}>
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusInfo.color} print:px-2 print:py-0.5`}>
                               {statusInfo.label}
                             </span>
                           </div>
                         );
                       })
                     ) : (
-                      <p className="text-gray-500 text-center py-8">
+                      <p className="text-gray-500 text-center py-8 print:py-4">
                         Aucune disponibilité déclarée pour cet événement
                       </p>
                     )}

@@ -23,6 +23,7 @@ interface ChildRow {
   name: string;
   birthDate: string;
   parentId: Parent | string;
+  parentId2?: Parent | string;
   teamId: Team | string;
 }
 
@@ -35,7 +36,7 @@ export default function AdminChildrenPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [editChild, setEditChild] = useState<ChildRow | null>(null);
   const [showCreateChild, setShowCreateChild] = useState(false);
-  const [linkModal, setLinkModal] = useState<{ url: string; childName: string } | null>(null);
+  const [linkModal, setLinkModal] = useState<{ url: string; childName: string; parentName?: string } | null>(null);
 
   useEffect(() => {
     fetch('/api/auth/me', { credentials: 'include' })
@@ -77,8 +78,16 @@ export default function AdminChildrenPage() {
     }
   };
 
-  const handleGetLoginLink = async (child: ChildRow) => {
-    const parentId = typeof child.parentId === 'object' ? child.parentId._id : child.parentId;
+  const handleGetLoginLink = async (child: ChildRow, parentNumber: 1 | 2) => {
+    const parentId = parentNumber === 1 
+      ? (typeof child.parentId === 'object' ? child.parentId._id : child.parentId)
+      : (child.parentId2 && typeof child.parentId2 === 'object' ? child.parentId2._id : child.parentId2);
+    
+    if (!parentId) {
+      alert('Parent non trouvé');
+      return;
+    }
+
     try {
       const res = await fetch('/api/auth/login-link', {
         method: 'POST',
@@ -88,7 +97,10 @@ export default function AdminChildrenPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setLinkModal({ url: data.url, childName: child.name });
+        const parentName = parentNumber === 1
+          ? (typeof child.parentId === 'object' ? child.parentId.name : 'Parent 1')
+          : (child.parentId2 && typeof child.parentId2 === 'object' ? child.parentId2.name : 'Parent 2');
+        setLinkModal({ url: data.url, childName: child.name, parentName });
       } else {
         alert(data.error || 'Erreur');
       }
@@ -158,9 +170,18 @@ export default function AdminChildrenPage() {
                     <tr key={child._id}>
                       <td className="px-4 py-3 text-sm text-gray-900">{child.name}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">
-                        {typeof child.parentId === 'object'
-                          ? `${child.parentId.name} (${child.parentId.email})`
-                          : '-'}
+                        <div>
+                          {typeof child.parentId === 'object'
+                            ? `${child.parentId.name} (${child.parentId.email})`
+                            : '-'}
+                        </div>
+                        {child.parentId2 && (
+                          <div className="mt-1 text-xs text-gray-500">
+                            {typeof child.parentId2 === 'object'
+                              ? `${child.parentId2.name} (${child.parentId2.email})`
+                              : '-'}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {typeof child.teamId === 'object'
@@ -180,13 +201,24 @@ export default function AdminChildrenPage() {
                         >
                           Modifier
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleGetLoginLink(child)}
-                          className="text-green-600 hover:underline"
-                        >
-                          Recevoir un code connexion
-                        </button>
+                        <div className="mt-1 space-y-1">
+                          <button
+                            type="button"
+                            onClick={() => handleGetLoginLink(child, 1)}
+                            className="text-green-600 hover:underline block"
+                          >
+                            Code Parent 1
+                          </button>
+                          {child.parentId2 && (
+                            <button
+                              type="button"
+                              onClick={() => handleGetLoginLink(child, 2)}
+                              className="text-green-600 hover:underline block"
+                            >
+                              Code Parent 2
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -232,7 +264,7 @@ export default function AdminChildrenPage() {
           <div className="bg-white rounded-lg max-w-lg w-full p-6">
             <h2 className="text-lg font-bold mb-2">Lien de connexion</h2>
             <p className="text-sm text-gray-600 mb-2">
-              Envoyez ce lien au parent de <strong>{linkModal.childName}</strong> (valable 24 h).
+              Envoyez ce lien {linkModal.parentName ? `à ${linkModal.parentName}` : 'au parent'} pour <strong>{linkModal.childName}</strong> (valable 24 h).
             </p>
             <input
               type="text"

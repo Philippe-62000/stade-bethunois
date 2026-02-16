@@ -207,13 +207,20 @@ export default function EducatorEventsPage() {
                       setShowDayEventsModal(false);
                       setSelectedEventForDelete(ev);
                     }}
-                    className="w-full text-left px-3 py-2 rounded border border-gray-200 hover:bg-gray-50 flex justify-between items-center"
+                    className="w-full text-left px-3 py-2 rounded border border-gray-200 hover:bg-gray-50"
                   >
-                    <span>
-                      {ev.type === 'training' ? 'Entraînement' : ev.type === 'match' ? 'Match' : 'Tournoi'} — {ev.time}
-                      {ev.teamId?.name && ` (${ev.teamId.name})`}
-                    </span>
-                    <span className="text-gray-500 text-sm">Supprimer</span>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-medium">
+                          {ev.type === 'training' ? 'Entraînement' : ev.type === 'match' ? 'Match' : 'Tournoi'} — {ev.time}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          <div><strong>Lieu:</strong> {ev.location}</div>
+                          {ev.teamId?.name && <div><strong>Groupe:</strong> {ev.teamId.name} {ev.teamId.category && `(${ev.teamId.category})`}</div>}
+                        </div>
+                      </div>
+                      <span className="text-gray-500 text-sm ml-4">Supprimer</span>
+                    </div>
                   </button>
                 </li>
               ))}
