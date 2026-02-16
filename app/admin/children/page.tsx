@@ -114,24 +114,51 @@ export default function AdminChildrenPage() {
               const config = await configRes.json();
               
               if (config.serviceId && config.templateIdLoginCode && config.publicKey) {
-                // Initialiser EmailJS avec la clé publique (une seule fois)
-                if (!emailjs.init) {
-                  emailjs.init(config.publicKey);
-                }
+                // Générer le HTML complet pour le template EmailJS
+                const htmlMessage = `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code de connexion</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+    <h1 style="color: #2563eb; margin-top: 0;">Code de connexion</h1>
+    <p>Bonjour ${data.parentName || 'Parent'},</p>
+    <p>Voici votre code de connexion pour accéder au planning de votre enfant :</p>
+    <div style="background-color: #ffffff; border: 2px solid #2563eb; border-radius: 6px; padding: 20px; text-align: center; margin: 20px 0;">
+      <p style="margin: 0; font-size: 14px; color: #666;">Votre code de connexion :</p>
+      <p style="margin: 10px 0; font-size: 32px; font-weight: bold; color: #2563eb; letter-spacing: 4px;">${data.code || ''}</p>
+    </div>
+    <p>Pour vous connecter, rendez-vous sur :</p>
+    <p style="margin: 20px 0;">
+      <a href="${data.siteUrl || ''}" style="display: inline-block; background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Accéder au planning</a>
+    </p>
+    <p style="font-size: 14px; color: #666; margin-top: 30px;">
+      Ce code est valable sans limitation de temps. Vous pouvez le modifier à tout moment depuis votre espace parent.
+    </p>
+    <p style="font-size: 14px; color: #666;">
+      Si vous n'avez pas demandé ce code, vous pouvez ignorer cet email.
+    </p>
+  </div>
+</body>
+</html>
+                `.trim();
                 
                 // Préparer les paramètres du template
                 const templateParams = {
-                  parent_name: data.parentName || '',
-                  site_url: data.siteUrl || '',
-                  login_code: data.code || '',
+                  html_message: htmlMessage,
                   to_email: data.parentEmail || '',
                   reply_to: data.parentEmail || '',
+                  subject: 'Code de connexion - Stade Béthunois',
                 };
                 
                 console.log('Envoi EmailJS avec:', {
                   serviceId: config.serviceId,
                   templateId: config.templateIdLoginCode,
-                  templateParams,
+                  to_email: data.parentEmail,
                 });
                 
                 // Envoyer l'email avec les paramètres du template
