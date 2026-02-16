@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Calendar from '@/components/Calendar';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isSameMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 interface Event {
@@ -28,10 +28,22 @@ interface Child {
   };
 }
 
+interface Availability {
+  _id: string;
+  eventId: {
+    _id: string;
+  };
+  childId: {
+    _id: string;
+  };
+  status: 'present' | 'absent' | 'pending';
+}
+
 export default function ParentCalendarPage() {
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
+  const [availabilities, setAvailabilities] = useState<Availability[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedEvents, setSelectedEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,9 +54,10 @@ export default function ParentCalendarPage() {
 
   const fetchData = async () => {
     try {
-      const [eventsRes, childrenRes] = await Promise.all([
+      const [eventsRes, childrenRes, availabilitiesRes] = await Promise.all([
         fetch('/api/events'),
         fetch('/api/children'),
+        fetch('/api/availabilities'),
       ]);
 
       if (eventsRes.ok) {
@@ -55,6 +68,11 @@ export default function ParentCalendarPage() {
       if (childrenRes.ok) {
         const childrenData = await childrenRes.json();
         setChildren(childrenData.children || []);
+      }
+
+      if (availabilitiesRes.ok) {
+        const availabilitiesData = await availabilitiesRes.json();
+        setAvailabilities(availabilitiesData.availabilities || []);
       }
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
@@ -87,13 +105,66 @@ export default function ParentCalendarPage() {
       });
 
       if (response.ok) {
-        // Rafraîchir les données
         fetchData();
       }
     } catch (error) {
       console.error('Erreur lors de la mise à jour:', error);
     }
   };
+
+  const handleMonthAction = async (month: Date, status: 'present' | 'absent') => {
+    const monthStart = startOfMonth(month);
+    const monthEnd = endOfMonth(month);
+    
+    const monthEvents = events.filter(event => {
+      const eventDate = new Date(event.date);
+      return isSameMonth(eventDate, month) && eventDate >= monthStart && eventDate <= monthEnd;
+    });
+
+    const relevantChildren = children.filter(child => {
+      return monthEvents.some(event => {
+        if (event.selectedChildrenIds && event.selectedChildrenIds.length > 0) {
+          return event.selectedChildrenIds.includes(child._id);
+        }
+        return child.teamId.name === event.teamId.name;
+      });
+    });
+
+    try {
+      const promises = [];
+      for (const event of monthEvents) {
+        for (const child of relevantChildren) {
+          const isRelevant = event.selectedChildrenIds && event.selectedChildrenIds.length > 0
+            ? event.selectedChildrenIds.includes(child._id)
+            : child.teamId.name === event.teamId.name;
+          
+          if (isRelevant) {
+            promises.push(
+              fetch('/api/availabilities', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  eventId: event._id,
+                  childId: child._id,
+                  status,
+                }),
+              })
+            );
+          }
+        }
+      }
+      await Promise.all(promises);
+      fetchData();
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour mensuelle:', error);
+    }
+  };
+
+  const availabilitiesForCalendar = availabilities.map(av => ({
+    eventId: typeof av.eventId === 'object' ? av.eventId._id : av.eventId,
+    childId: typeof av.childId === 'object' ? av.childId._id : av.childId,
+    status: av.status,
+  }));
 
   const getEventTypeLabel = (type: string) => {
     switch (type) {
@@ -135,7 +206,13 @@ export default function ParentCalendarPage() {
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 md:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           <div className="lg:col-span-2 order-2 lg:order-1">
-            <Calendar events={events} onDateClick={handleDateClick} />
+            <Calendar
+              events={events}
+              availabilities={availabilitiesForCalendar}
+              onDateClick={handleDateClick}
+              onMonthAction={handleMonthAction}
+              showMonthActions={true}
+            />
           </div>
 
           <div className="lg:col-span-1 order-1 lg:order-2">

@@ -17,14 +17,24 @@ export interface CalendarEvent {
 }
 
 
-interface CalendarProps {
-  events: CalendarEvent[];
-  onDateClick?: (date: Date) => void;
-  onEventClick?: (event: CalendarEvent) => void;
+interface AvailabilityStatus {
+  eventId: string;
+  childId: string;
+  status: 'present' | 'absent' | 'pending';
 }
 
-export default function Calendar({ events, onDateClick, onEventClick }: CalendarProps) {
+interface CalendarProps {
+  events: CalendarEvent[];
+  availabilities?: AvailabilityStatus[];
+  onDateClick?: (date: Date) => void;
+  onEventClick?: (event: CalendarEvent) => void;
+  onMonthAction?: (month: Date, status: 'present' | 'absent') => void;
+  showMonthActions?: boolean;
+}
+
+export default function Calendar({ events, availabilities = [], onDateClick, onEventClick, onMonthAction, showMonthActions = false }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [showMonthButtons, setShowMonthButtons] = useState(false);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -35,6 +45,31 @@ export default function Calendar({ events, onDateClick, onEventClick }: Calendar
       const eventDate = new Date(event.date);
       return isSameDay(eventDate, date);
     });
+  };
+
+  const getDayStatus = (date: Date): 'present' | 'absent' | 'pending' | null => {
+    const dayEvents = getEventsForDate(date);
+    if (dayEvents.length === 0) return null;
+    
+    const dayAvailabilities = availabilities.filter(av => {
+      return dayEvents.some(ev => ev._id === av.eventId);
+    });
+    
+    if (dayAvailabilities.length === 0) return 'pending';
+    
+    const hasPresent = dayAvailabilities.some(av => av.status === 'present');
+    const hasAbsent = dayAvailabilities.some(av => av.status === 'absent');
+    const allAbsent = dayAvailabilities.length > 0 && dayAvailabilities.every(av => av.status === 'absent');
+    
+    if (hasPresent) return 'present';
+    if (allAbsent) return 'absent';
+    return 'pending';
+  };
+
+  const handleMonthClick = () => {
+    if (showMonthActions || onMonthAction) {
+      setShowMonthButtons(!showMonthButtons);
+    }
   };
 
   const getEventTypeColor = (type: string) => {
@@ -58,22 +93,55 @@ export default function Calendar({ events, onDateClick, onEventClick }: Calendar
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
-      <div className="flex justify-between items-center mb-6">
-        <button
-          onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-          className="p-2 hover:bg-gray-100 rounded-md"
-        >
-          ←
-        </button>
-        <h2 className="text-xl font-bold">
-          {format(currentMonth, 'MMMM yyyy', { locale: fr })}
-        </h2>
-        <button
-          onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-          className="p-2 hover:bg-gray-100 rounded-md"
-        >
-          →
-        </button>
+      <div className="mb-6">
+        <div className="flex justify-between items-center">
+          <button
+            onClick={() => {
+              setCurrentMonth(subMonths(currentMonth, 1));
+              setShowMonthButtons(false);
+            }}
+            className="p-2 hover:bg-gray-100 rounded-md"
+          >
+            ←
+          </button>
+          <button
+            onClick={handleMonthClick}
+            className={`text-xl font-bold px-3 py-1 rounded-md ${showMonthActions || onMonthClick ? 'hover:bg-gray-100 cursor-pointer' : ''}`}
+          >
+            {format(currentMonth, 'MMMM yyyy', { locale: fr })}
+          </button>
+          <button
+            onClick={() => {
+              setCurrentMonth(addMonths(currentMonth, 1));
+              setShowMonthButtons(false);
+            }}
+            className="p-2 hover:bg-gray-100 rounded-md"
+          >
+            →
+          </button>
+        </div>
+        {showMonthButtons && (showMonthActions || onMonthAction) && (
+          <div className="flex justify-center gap-2 mt-3">
+            <button
+              onClick={() => {
+                onMonthAction?.(currentMonth, 'present');
+                setShowMonthButtons(false);
+              }}
+              className="px-4 py-2 text-sm bg-green-100 text-green-800 rounded-md hover:bg-green-200 font-medium"
+            >
+              Présent à tous les événements du mois
+            </button>
+            <button
+              onClick={() => {
+                onMonthAction?.(currentMonth, 'absent');
+                setShowMonthButtons(false);
+              }}
+              className="px-4 py-2 text-sm bg-pink-100 text-pink-800 rounded-md hover:bg-pink-200 font-medium"
+            >
+              Absent à tous les événements du mois
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-7 gap-1 mb-2">
@@ -91,13 +159,25 @@ export default function Calendar({ events, onDateClick, onEventClick }: Calendar
         {daysInMonth.map(day => {
           const dayEvents = getEventsForDate(day);
           const isToday = isSameDay(day, new Date());
+          const dayStatus = getDayStatus(day);
+          
+          let bgColor = '';
+          if (dayStatus === 'present') {
+            bgColor = 'bg-green-100 border-green-300';
+          } else if (dayStatus === 'absent') {
+            bgColor = 'bg-pink-100 border-pink-300';
+          } else if (dayStatus === 'pending' && dayEvents.length > 0) {
+            bgColor = 'bg-white border-gray-200';
+          } else {
+            bgColor = isToday ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200';
+          }
           
           return (
             <div
               key={day.toISOString()}
               onClick={() => onDateClick?.(day)}
-              className={`aspect-square border border-gray-200 rounded-md p-1 md:p-2 cursor-pointer hover:bg-gray-50 active:bg-gray-100 touch-manipulation ${
-                isToday ? 'bg-blue-50 border-blue-300' : ''
+              className={`aspect-square border rounded-md p-1 md:p-2 cursor-pointer hover:opacity-80 active:opacity-70 touch-manipulation ${bgColor} ${
+                isToday && dayStatus === null ? 'border-blue-300' : ''
               }`}
             >
               <div className={`text-xs md:text-sm font-medium ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
