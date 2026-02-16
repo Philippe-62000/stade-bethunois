@@ -162,6 +162,7 @@ export default function EducatorEventsPage() {
       {showCreateForm && (
         <CreateEventForm
           teams={teams}
+          places={places}
           children={children}
           selectedDate={selectedDate}
           onTeamChange={handleTeamChange}
@@ -282,6 +283,7 @@ export default function EducatorEventsPage() {
 
 function CreateEventForm({
   teams,
+  places,
   children,
   selectedDate,
   onTeamChange,
@@ -289,23 +291,33 @@ function CreateEventForm({
   onSuccess,
 }: {
   teams: Team[];
+  places: { _id: string; name: string }[];
   children: Child[];
   selectedDate: Date | null;
   onTeamChange: (teamId: string) => void;
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     type: 'training' as 'training' | 'match' | 'tournament',
     date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
     time: '18:00',
     location: '',
-    teamId: '',
+    teamIds: [] as string[],
+    selectAllTeams: false,
     selectedChildrenIds: [] as string[],
     selectAll: true,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Charger les enfants quand une seule équipe est sélectionnée
+  useEffect(() => {
+    if (formData.teamIds.length === 1 && !formData.selectAllTeams) {
+      onTeamChange(formData.teamIds[0]);
+    }
+  }, [formData.teamIds, formData.selectAllTeams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -313,20 +325,38 @@ function CreateEventForm({
     setLoading(true);
 
     try {
-      const response = await fetch('/api/events', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          selectedChildrenIds: formData.selectAll ? null : formData.selectedChildrenIds,
-        }),
-      });
+      const teamIdsArray = formData.selectAllTeams ? teams.map(t => t._id) : formData.teamIds;
+      
+      if (teamIdsArray.length === 0) {
+        setError('Sélectionnez au moins une équipe');
+        setLoading(false);
+        return;
+      }
 
-      if (!response.ok) {
-        const data = await response.json();
-        setError(data.error || 'Erreur lors de la création');
+      // Créer un événement pour chaque équipe
+      const promises = teamIdsArray.map(teamId =>
+        fetch('/api/events', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: formData.type,
+            date: formData.date,
+            time: formData.time,
+            location: formData.location,
+            teamId,
+            selectedChildrenIds: formData.selectAll ? null : formData.selectedChildrenIds,
+          }),
+        })
+      );
+
+      const responses = await Promise.all(promises);
+      const errors = await Promise.all(responses.map(r => r.ok ? null : r.json().catch(() => ({ error: 'Erreur inconnue' }))));
+      
+      const firstError = errors.find(e => e);
+      if (firstError) {
+        setError(firstError.error || 'Erreur lors de la création');
         return;
       }
 
@@ -395,38 +425,105 @@ function CreateEventForm({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Lieu
             </label>
-            <input
-              type="text"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            />
+            {places.length > 0 ? (
+              <select
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="">Choisir un lieu</option>
+                {places.map((place) => (
+                  <option key={place._id} value={place.name}>
+                    {place.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="Saisir un lieu"
+              />
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Équipe
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Équipe(s)
             </label>
-            <select
-              value={formData.teamId}
-              onChange={(e) => {
-                setFormData({ ...formData, teamId: e.target.value, selectedChildrenIds: [] });
-                onTeamChange(e.target.value);
-              }}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Sélectionner une équipe</option>
-              {teams.map(team => (
-                <option key={team._id} value={team._id}>
-                  {team.name} ({team.category})
-                </option>
-              ))}
-            </select>
+            {teams.length === 0 ? (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-800">
+                Aucune équipe. Créez-en une dans la page{' '}
+                <button
+                  type="button"
+                  onClick={() => router.push('/educator/teams')}
+                  className="underline font-medium hover:no-underline"
+                >
+                  Équipes
+                </button>
+                .
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.selectAllTeams}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setFormData({
+                        ...formData,
+                        selectAllTeams: checked,
+                        teamIds: checked ? teams.map((t) => t._id) : [],
+                        selectedChildrenIds: [],
+                      });
+                    }}
+                    className="mr-2"
+                  />
+                  <span className="text-sm font-medium">Toutes les équipes</span>
+                </label>
+                {!formData.selectAllTeams && (
+                  <div className="border border-gray-300 rounded-md p-3 max-h-48 overflow-y-auto">
+                    {teams.map((team) => (
+                      <label key={team._id} className="flex items-center mb-2">
+                        <input
+                          type="checkbox"
+                          checked={formData.teamIds.includes(team._id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const next = [...formData.teamIds, team._id];
+                              setFormData({
+                                ...formData,
+                                teamIds: next,
+                                selectedChildrenIds: next.length === 1 ? formData.selectedChildrenIds : [],
+                              });
+                              if (next.length === 1) onTeamChange(next[0]);
+                            } else {
+                              const next = formData.teamIds.filter((id) => id !== team._id);
+                              setFormData({
+                                ...formData,
+                                teamIds: next,
+                                selectedChildrenIds: next.length === 1 ? formData.selectedChildrenIds : [],
+                              });
+                              if (next.length === 1) onTeamChange(next[0]);
+                            }
+                          }}
+                          className="mr-2"
+                        />
+                        <span className="text-sm">{team.name} ({team.category})</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {formData.teamId && children.length > 0 && (
+          {formData.teamIds.length === 1 && !formData.selectAllTeams && children.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Joueurs concernés

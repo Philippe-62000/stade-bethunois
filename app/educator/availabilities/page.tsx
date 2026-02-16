@@ -129,12 +129,12 @@ export default function EducatorAvailabilitiesPage() {
     }
   };
 
+  const selectedEvent = events.find(e => e._id === selectedEventId);
+
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
+    contentRef: printRef,
     documentTitle: `Liste des joueurs - ${selectedEvent ? format(new Date(selectedEvent.date), 'dd-MM-yyyy', { locale: fr }) : ''}`,
   });
-
-  const selectedEvent = events.find(e => e._id === selectedEventId);
   
   // Obtenir les équipes uniques depuis les événements
   const uniqueTeams = Array.from(
