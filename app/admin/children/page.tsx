@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import emailjs from '@emailjs/browser';
 
 interface Parent {
   _id: string;
@@ -36,7 +37,6 @@ export default function AdminChildrenPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [editChild, setEditChild] = useState<ChildRow | null>(null);
   const [showCreateChild, setShowCreateChild] = useState(false);
-  const [linkModal, setLinkModal] = useState<{ url: string; childName: string; parentName?: string } | null>(null);
 
   useEffect(() => {
     fetch('/api/auth/me', { credentials: 'include' })
@@ -106,8 +106,34 @@ export default function AdminChildrenPage() {
         });
         const data = await res.json();
         if (res.ok) {
-          alert(`Email envoyé à ${parentEmail} avec le code de connexion: ${data.code}`);
-          setLinkModal({ url: data.url, childName: child.name, parentName });
+          // Envoyer l'email depuis le client avec EmailJS
+          if (data.sendEmail) {
+            try {
+              // Récupérer la configuration EmailJS depuis l'API
+              const configRes = await fetch('/api/emailjs-config', { credentials: 'include' });
+              const config = await configRes.json();
+              
+              if (config.serviceId && config.templateIdLoginCode && config.publicKey) {
+                await emailjs.send(
+                  config.serviceId,
+                  config.templateIdLoginCode,
+                  {
+                    parent_name: data.parentName,
+                    site_url: data.siteUrl,
+                    login_code: data.code,
+                    to_email: data.parentEmail,
+                  },
+                  config.publicKey
+                );
+                alert(`Email envoyé à ${parentEmail}`);
+              } else {
+                alert('Configuration EmailJS manquante. Veuillez configurer les variables d\'environnement EmailJS.');
+              }
+            } catch (emailError) {
+              console.error('Erreur envoi email:', emailError);
+              alert('Erreur lors de l\'envoi de l\'email. Veuillez vérifier la configuration EmailJS.');
+            }
+          }
         } else {
           alert(data.error || 'Erreur');
         }
@@ -117,12 +143,6 @@ export default function AdminChildrenPage() {
     }
   };
 
-  const copyLink = () => {
-    if (linkModal) {
-      navigator.clipboard.writeText(linkModal.url);
-      alert('Lien copié dans le presse-papier.');
-    }
-  };
 
   if (checkingAuth) {
     return (
@@ -267,38 +287,6 @@ export default function AdminChildrenPage() {
         />
       )}
 
-      {linkModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-lg w-full p-6">
-            <h2 className="text-lg font-bold mb-2">Lien de connexion</h2>
-            <p className="text-sm text-gray-600 mb-2">
-              Envoyez ce lien {linkModal.parentName ? `à ${linkModal.parentName}` : 'au parent'} pour <strong>{linkModal.childName}</strong> (valable 24 h).
-            </p>
-            <input
-              type="text"
-              readOnly
-              value={linkModal.url}
-              className="w-full px-3 py-2 border border-gray-300 rounded text-sm mb-4"
-            />
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={copyLink}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Copier le lien
-              </button>
-              <button
-                type="button"
-                onClick={() => setLinkModal(null)}
-                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-              >
-                Fermer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

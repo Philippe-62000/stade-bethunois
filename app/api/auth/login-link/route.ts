@@ -3,7 +3,6 @@ import connectDB from '@/lib/mongodb';
 import LoginToken from '@/models/LoginToken';
 import User from '@/models/User';
 import { getAuthUser } from '@/lib/auth';
-import { sendLoginCodeEmailToParent } from '@/lib/emailjs';
 import crypto from 'crypto';
 
 const TOKEN_VALIDITY_HOURS = 24;
@@ -58,25 +57,15 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXTAUTH_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
     const url = `${baseUrl}/login-by-token?token=${loginCode}`;
 
-    // Envoyer l'email si demandé
-    if (shouldSendEmail) {
-      try {
-        await sendLoginCodeEmailToParent({
-          parent_name: parent.name,
-          site_url: baseUrl,
-          login_code: loginCode,
-        });
-      } catch (emailError) {
-        console.error('Erreur lors de l\'envoi de l\'email:', emailError);
-        // Ne pas faire échouer la requête si l'email échoue
-      }
-    }
-
+    // Retourner les données pour l'envoi d'email côté client
     return NextResponse.json({ 
       url, 
       code: loginCode,
       expiresAt,
-      emailSent: shouldSendEmail || false
+      parentName: parent.name,
+      parentEmail: parent.email,
+      siteUrl: baseUrl,
+      sendEmail: shouldSendEmail || false
     });
   } catch (error: any) {
     console.error('Erreur lors de la création du lien:', error);
