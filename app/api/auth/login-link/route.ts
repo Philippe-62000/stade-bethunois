@@ -27,17 +27,18 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
-    const parent = await User.findById(parentId);
-    if (!parent) {
+    const user = await User.findById(parentId);
+    if (!user) {
       return NextResponse.json(
-        { error: 'Parent introuvable' },
+        { error: 'Utilisateur introuvable' },
         { status: 404 }
       );
     }
 
-    if (parent.role !== 'parent') {
+    // Accepter tous les rôles (parent, educator, admin)
+    if (!['parent', 'educator', 'admin'].includes(user.role)) {
       return NextResponse.json(
-        { error: 'L\'utilisateur n\'est pas un parent' },
+        { error: 'Rôle utilisateur invalide' },
         { status: 400 }
       );
     }
@@ -62,8 +63,8 @@ export async function POST(request: NextRequest) {
       url, 
       code: loginCode,
       expiresAt,
-      parentName: parent.name,
-      parentEmail: parent.email,
+      parentName: user.name,
+      parentEmail: user.email,
       siteUrl: baseUrl,
       sendEmail: shouldSendEmail || false
     });

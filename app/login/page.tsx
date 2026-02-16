@@ -161,10 +161,6 @@ export default function LoginPage() {
           <p className="text-center text-sm text-gray-500">
             Pour obtenir un compte, contactez l&apos;administrateur du club.
           </p>
-          <p className="text-center text-xs text-gray-400 mt-2">
-            Première utilisation ? Créez le premier compte administrateur en allant sur{' '}
-            <a href="/register" className="text-blue-600 hover:underline">/register</a>.
-          </p>
         </form>
       </div>
     </div>
