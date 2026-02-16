@@ -36,7 +36,6 @@ export default function AdminChildrenPage() {
   const [loading, setLoading] = useState(true);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [editChild, setEditChild] = useState<ChildRow | null>(null);
-  const [showCreateChild, setShowCreateChild] = useState(false);
 
   useEffect(() => {
     fetch('/api/auth/me', { credentials: 'include' })
@@ -232,13 +231,6 @@ export default function AdminChildrenPage() {
           <div className="flex flex-wrap justify-between items-center gap-2">
             <h1 className="text-2xl font-bold text-gray-900">Enfants</h1>
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setShowCreateChild(true)}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
-              >
-                Créer un enfant
-              </button>
               <Link
                 href="/admin"
                 className="text-sm text-blue-600 hover:text-blue-500 font-medium"
@@ -328,24 +320,12 @@ export default function AdminChildrenPage() {
             </div>
             {children.length === 0 && (
               <p className="p-6 text-gray-500 text-center">
-              Aucun enfant. Créez d&apos;abord un compte parent (Menu → Créer un compte), puis ajoutez un enfant ici en le reliant à ce parent.
+              Aucun enfant. Les enfants sont ajoutés via le formulaire « Créer un compte » (Menu → Créer un compte).
             </p>
             )}
           </div>
         )}
       </div>
-
-      {showCreateChild && (
-        <CreateChildModal
-          parents={parents}
-          teams={teams}
-          onClose={() => setShowCreateChild(false)}
-          onSuccess={() => {
-            setShowCreateChild(false);
-            fetchData();
-          }}
-        />
-      )}
 
       {editChild && (
         <EditChildModal
@@ -360,142 +340,6 @@ export default function AdminChildrenPage() {
         />
       )}
 
-    </div>
-  );
-}
-
-function CreateChildModal({
-  parents,
-  teams,
-  onClose,
-  onSuccess,
-}: {
-  parents: Parent[];
-  teams: Team[];
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
-  const [name, setName] = useState('');
-  const [birthDate, setBirthDate] = useState('');
-  const [selectedParentId, setSelectedParentId] = useState(parents[0]?._id ?? '');
-  const [selectedTeamId, setSelectedTeamId] = useState(teams[0]?._id ?? '');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const res = await fetch('/api/children', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          name: name.trim(),
-          birthDate,
-          parentId: selectedParentId,
-          teamId: selectedTeamId,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || 'Erreur');
-        return;
-      }
-      onSuccess();
-    } catch (e) {
-      setError('Erreur');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-md w-full p-6">
-        <h2 className="text-xl font-bold mb-4">Créer un enfant</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Saisissez le <strong>nom de l&apos;enfant</strong>. Le parent (compte créé via « Créer un compte ») reçoit les rappels sur son adresse mail.
-        </p>
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 text-red-700 rounded text-sm">{error}</div>
-        )}
-        {parents.length === 0 ? (
-          <p className="text-amber-700 text-sm mb-4">
-            Aucun compte parent. Créez d&apos;abord un parent via <Link href="/register" className="underline">Créer un compte</Link>, puis revenez ici.
-          </p>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nom de l&apos;enfant</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                placeholder="Ex. Lucas, Chloé"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Parent (compte)</label>
-              <select
-                value={selectedParentId}
-                onChange={(e) => setSelectedParentId(e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                {parents.map((p) => (
-                  <option key={p._id} value={p._id}>
-                    {p.name} ({p.email})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Équipe</label>
-              <select
-                value={selectedTeamId}
-                onChange={(e) => setSelectedTeamId(e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                {teams.map((t) => (
-                  <option key={t._id} value={t._id}>
-                    {t.name} ({t.category})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date de naissance</label>
-              <input
-                type="date"
-                value={birthDate}
-                onChange={(e) => setBirthDate(e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button type="button" onClick={onClose} className="px-4 py-2 border rounded-md hover:bg-gray-50">
-                Annuler
-              </button>
-              <button
-                type="submit"
-                disabled={loading || teams.length === 0}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
-              >
-                {loading ? 'Création...' : 'Créer'}
-              </button>
-            </div>
-          </form>
-        )}
-        {parents.length > 0 && teams.length === 0 && (
-          <p className="text-amber-700 text-sm mt-2">Créez au moins une équipe (Menu → Gérer les équipes).</p>
-        )}
-      </div>
     </div>
   );
 }
