@@ -43,12 +43,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!children || !Array.isArray(children) || children.length === 0) {
-      return NextResponse.json(
-        { error: 'Au moins un enfant requis' },
-        { status: 400 }
-      );
+    // Pour les administrateurs, les enfants sont optionnels
+    if (role !== 'admin') {
+      if (!children || !Array.isArray(children) || children.length === 0) {
+        return NextResponse.json(
+          { error: 'Au moins un enfant requis pour les parents et éducateurs' },
+          { status: 400 }
+        );
+      }
     }
+
+    // S'assurer que children est un tableau (même vide pour les admins)
+    const childrenArray = Array.isArray(children) ? children : [];
 
     // Vérifier si les emails existent déjà
     const existingUser1 = await User.findOne({ email: parentEmail.toLowerCase() });
@@ -98,26 +104,28 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Créer les enfants
+    // Créer les enfants (seulement si le rôle n'est pas admin ou si des enfants sont fournis)
     const createdChildren = [];
-    for (const childData of children) {
-      if (!childData.name || !childData.teamId || !childData.birthDate) {
-        continue; // Ignorer les enfants invalides
+    if (role !== 'admin' || childrenArray.length > 0) {
+      for (const childData of childrenArray) {
+        if (!childData.name || !childData.teamId || !childData.birthDate) {
+          continue; // Ignorer les enfants invalides
+        }
+
+        const childObj: any = {
+          name: childData.name,
+          teamId: childData.teamId,
+          parentId: parent1._id,
+          birthDate: new Date(childData.birthDate),
+        };
+
+        if (parent2) {
+          childObj.parentId2 = parent2._id;
+        }
+
+        const child = await Child.create(childObj);
+        createdChildren.push(child);
       }
-
-      const childObj: any = {
-        name: childData.name,
-        teamId: childData.teamId,
-        parentId: parent1._id,
-        birthDate: new Date(childData.birthDate),
-      };
-
-      if (parent2) {
-        childObj.parentId2 = parent2._id;
-      }
-
-      const child = await Child.create(childObj);
-      createdChildren.push(child);
     }
 
     return NextResponse.json(

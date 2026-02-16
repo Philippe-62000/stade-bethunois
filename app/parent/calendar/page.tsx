@@ -223,12 +223,6 @@ export default function ParentCalendarPage() {
               >
                 Modifier le mot de passe
               </Link>
-              <button
-                onClick={() => router.push('/parent/settings')}
-                className="text-sm text-blue-600 hover:text-blue-500"
-              >
-                Paramètres
-              </button>
             </div>
           </div>
         </div>
