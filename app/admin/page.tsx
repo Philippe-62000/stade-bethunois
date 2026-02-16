@@ -52,6 +52,15 @@ export default function AdminPage() {
             </p>
           </Link>
           <Link
+            href="/admin/families"
+            className="block p-6 bg-white rounded-lg shadow hover:shadow-md border border-gray-200"
+          >
+            <h2 className="text-lg font-semibold text-gray-900">Liste des familles</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Voir toutes les familles créées (parents et enfants). Supprimer une famille complète.
+            </p>
+          </Link>
+          <Link
             href="/admin/children"
             className="block p-6 bg-white rounded-lg shadow hover:shadow-md border border-gray-200"
           >
