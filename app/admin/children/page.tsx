@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import emailjs from '@emailjs/browser';
 
 interface Parent {
@@ -22,7 +20,6 @@ interface Team {
 interface ChildRow {
   _id: string;
   name: string;
-  birthDate: string;
   parentId: Parent | string;
   parentId2?: Parent | string;
   teamId: Team | string;
@@ -254,7 +251,6 @@ export default function AdminChildrenPage() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Parent</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Équipe</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Naissance</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
@@ -279,11 +275,6 @@ export default function AdminChildrenPage() {
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {typeof child.teamId === 'object'
                           ? `${child.teamId.name} (${child.teamId.category})`
-                          : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {child.birthDate
-                          ? format(new Date(child.birthDate), 'dd/MM/yyyy', { locale: fr })
                           : '-'}
                       </td>
                       <td className="px-4 py-3 text-right text-sm space-x-2">
@@ -360,9 +351,6 @@ function EditChildModal({
   const parentId = typeof child.parentId === 'object' ? child.parentId._id : child.parentId;
   const teamId = typeof child.teamId === 'object' ? child.teamId._id : child.teamId;
   const [name, setName] = useState(child.name);
-  const [birthDate, setBirthDate] = useState(
-    child.birthDate ? format(new Date(child.birthDate), 'yyyy-MM-dd') : ''
-  );
   const [selectedParentId, setSelectedParentId] = useState(parentId);
   const [selectedTeamId, setSelectedTeamId] = useState(teamId);
   const [loading, setLoading] = useState(false);
@@ -379,7 +367,6 @@ function EditChildModal({
         credentials: 'include',
         body: JSON.stringify({
           name,
-          birthDate,
           parentId: selectedParentId,
           teamId: selectedTeamId,
         }),
@@ -444,16 +431,6 @@ function EditChildModal({
                 </option>
               ))}
             </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date de naissance</label>
-            <input
-              type="date"
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            />
           </div>
           <div className="flex gap-2 justify-end">
             <button type="button" onClick={onClose} className="px-4 py-2 border rounded-md hover:bg-gray-50">
