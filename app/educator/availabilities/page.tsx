@@ -45,8 +45,6 @@ export default function EducatorAvailabilitiesPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [availabilities, setAvailabilities] = useState<Availability[]>([]);
-  const [filteredAvailabilities, setFilteredAvailabilities] = useState<Availability[]>([]);
-  const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -56,23 +54,8 @@ export default function EducatorAvailabilitiesPage() {
   useEffect(() => {
     if (selectedEventId) {
       fetchAvailabilities(selectedEventId);
-      setSelectedTeamFilter('all'); // Réinitialiser le filtre quand on change d'événement
     }
   }, [selectedEventId]);
-
-  useEffect(() => {
-    if (selectedTeamFilter === 'all') {
-      setFilteredAvailabilities(availabilities);
-    } else {
-      // Filtrer par équipe : ne montrer que si l'équipe de l'événement sélectionné correspond
-      const selectedEvent = events.find(e => e._id === selectedEventId);
-      if (selectedEvent && selectedEvent.teamId.name === selectedTeamFilter) {
-        setFilteredAvailabilities(availabilities);
-      } else {
-        setFilteredAvailabilities([]);
-      }
-    }
-  }, [availabilities, selectedTeamFilter, selectedEventId, events]);
 
   const fetchEvents = async () => {
     try {
@@ -136,16 +119,9 @@ export default function EducatorAvailabilitiesPage() {
     documentTitle: `Liste des joueurs - ${selectedEvent ? format(new Date(selectedEvent.date), 'dd-MM-yyyy', { locale: fr }) : ''}`,
   });
   
-  // Obtenir les équipes uniques depuis les événements
-  const uniqueTeams = Array.from(
-    new Map(
-      events.map(event => [`${event.teamId.name}-${event.teamId.category}`, event.teamId])
-    ).values()
-  );
-
-  const presentCount = filteredAvailabilities.filter(a => a.status === 'present').length;
-  const absentCount = filteredAvailabilities.filter(a => a.status === 'absent').length;
-  const pendingCount = filteredAvailabilities.filter(a => a.status === 'pending').length;
+  const presentCount = availabilities.filter(a => a.status === 'present').length;
+  const absentCount = availabilities.filter(a => a.status === 'absent').length;
+  const pendingCount = availabilities.filter(a => a.status === 'pending').length;
 
   if (loading) {
     return (
@@ -234,24 +210,6 @@ export default function EducatorAvailabilitiesPage() {
                 </div>
 
                 <div className="mb-6 flex flex-wrap items-center gap-4">
-                  <div className="flex-1 min-w-[200px]">
-                    <label htmlFor="teamFilter" className="block text-sm font-medium text-gray-700 mb-2">
-                      Filtrer par équipe
-                    </label>
-                    <select
-                      id="teamFilter"
-                      value={selectedTeamFilter}
-                      onChange={(e) => setSelectedTeamFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="all">Toutes les équipes</option>
-                      {uniqueTeams.map((team, index) => (
-                        <option key={index} value={team.name}>
-                          {team.name} ({team.category})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
                   <div className="flex items-end">
                     <button
                       onClick={handlePrint}
@@ -299,17 +257,14 @@ export default function EducatorAvailabilitiesPage() {
                       <p><strong>Heure:</strong> {selectedEvent.time}</p>
                       <p><strong>Lieu:</strong> {selectedEvent.location}</p>
                       <p><strong>Équipe:</strong> {selectedEvent.teamId.name} ({selectedEvent.teamId.category})</p>
-                      {selectedTeamFilter !== 'all' && (
-                        <p><strong>Filtre:</strong> {uniqueTeams.find(t => t.name === selectedTeamFilter)?.name}</p>
-                      )}
                     </div>
                     <div className="text-lg font-semibold mb-4 pt-4 border-t">
                       Total des enfants présents : {presentCount}
                     </div>
                   </div>
                   <div className="space-y-2 print:space-y-1">
-                    {filteredAvailabilities.length > 0 ? (
-                      filteredAvailabilities.map(availability => {
+                    {availabilities.length > 0 ? (
+                      availabilities.map(availability => {
                         const statusInfo = getStatusLabel(availability.status);
                         return (
                           <div

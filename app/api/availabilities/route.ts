@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Availability from '@/models/Availability';
 import Child from '@/models/Child';
-import '@/models/Event';
+import Event from '@/models/Event';
 import '@/models/User';
 import { getAuthUser } from '@/lib/auth';
 
@@ -39,10 +39,27 @@ export async function GET(request: NextRequest) {
       query.childId = childId;
     }
 
-    const availabilities = await Availability.find(query)
+    let availabilities = await Availability.find(query)
       .populate('eventId')
-      .populate('childId', 'name')
+      .populate({ path: 'childId', select: 'name teamId', populate: { path: 'teamId', select: 'name category' } })
       .populate('parentId', 'name email');
+
+    // Pour les éducateurs/admin : filtrer pour ne garder que les enfants de l'équipe de l'événement
+    if (eventId && (authUser.role === 'educator' || authUser.role === 'admin')) {
+      const event = await Event.findById(eventId).populate('teamId', 'name category');
+      if (event?.teamId) {
+        const eventTeamId = typeof event.teamId === 'object' ? event.teamId._id : event.teamId;
+        availabilities = availabilities.filter(av => {
+          const child = av.childId;
+          if (!child || typeof child !== 'object') return false;
+          const childTeamId = (child as any).teamId;
+          const childTeamObj = typeof childTeamId === 'object' ? childTeamId : null;
+          if (!childTeamObj) return false;
+          const childTeamIdVal = childTeamObj._id || childTeamId;
+          return String(childTeamIdVal) === String(eventTeamId);
+        });
+      }
+    }
 
     return NextResponse.json({ availabilities });
   } catch (error: any) {
@@ -76,12 +93,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Vérifier que l'enfant appartient au parent
-    const child = await Child.findOne({ _id: childId, parentId: authUser.userId });
+    const child = await Child.findOne({ _id: childId, parentId: authUser.userId }).populate('teamId');
     if (!child) {
       return NextResponse.json(
         { error: 'Enfant non trouvé ou non autorisé' },
         { status: 403 }
       );
+    }
+
+    // Vérifier que l'enfant appartient à l'équipe de l'événement
+    const event = await Event.findById(eventId).populate('teamId', 'name category');
+    if (event?.teamId) {
+      const eventTeamId = typeof event.teamId === 'object' ? event.teamId._id?.toString() : event.teamId?.toString();
+      const childTeamId = typeof child.teamId === 'object' ? child.teamId._id?.toString() : child.teamId?.toString();
+      if (eventTeamId && childTeamId && eventTeamId !== childTeamId) {
+        return NextResponse.json(
+          { error: "Cet enfant n'appartient pas à l'équipe de cet événement" },
+          { status: 400 }
+        );
+      }
     }
 
     // Créer ou mettre à jour la disponibilité

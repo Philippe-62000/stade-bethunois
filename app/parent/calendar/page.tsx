@@ -138,7 +138,7 @@ export default function ParentCalendarPage() {
       for (const event of monthEvents) {
         const isRelevant = event.selectedChildrenIds && event.selectedChildrenIds.length > 0
           ? event.selectedChildrenIds.includes(selectedChildId)
-          : selectedChild.teamId?.name === event.teamId?.name;
+          : selectedChild.teamId?.name === event.teamId?.name && selectedChild.teamId?.category === event.teamId?.category;
         
         if (isRelevant) {
           promises.push(
@@ -168,7 +168,9 @@ export default function ParentCalendarPage() {
           return event.selectedChildrenIds.includes(selectedChildId);
         }
         const child = children.find(c => c._id === selectedChildId);
-        return child && child.teamId?.name === event.teamId?.name;
+        if (!child) return false;
+        // Comparer name ET category pour distinguer U9 1, U9 2, U9 3
+        return child.teamId?.name === event.teamId?.name && child.teamId?.category === event.teamId?.category;
       })
     : events;
 
@@ -285,7 +287,7 @@ export default function ParentCalendarPage() {
                       
                       const isRelevant = event.selectedChildrenIds && event.selectedChildrenIds.length > 0
                         ? event.selectedChildrenIds.includes(selectedChildId)
-                        : selectedChild.teamId?.name === event.teamId?.name;
+                        : selectedChild.teamId?.name === event.teamId?.name && selectedChild.teamId?.category === event.teamId?.category;
                       
                       if (!isRelevant) return null;
 
