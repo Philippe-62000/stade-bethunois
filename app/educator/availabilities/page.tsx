@@ -201,6 +201,9 @@ export default function EducatorAvailabilitiesPage() {
                     <div className="text-xs text-gray-600">
                       {getEventTypeLabel(event.type)} - {event.time}
                     </div>
+                    <div className="text-xs font-medium text-blue-600 mt-1">
+                      {event.teamId?.name} {event.teamId?.category && `(${event.teamId.category})`}
+                    </div>
                   </button>
                 ))}
               </div>
