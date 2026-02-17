@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     const createdChildren = [];
     if (role !== 'admin' || childrenArray.length > 0) {
       for (const childData of childrenArray) {
-        if (!childData.name || !childData.teamId || !childData.birthDate) {
+        if (!childData.name || !childData.teamId) {
           continue; // Ignorer les enfants invalides
         }
 
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
           name: childData.name,
           teamId: childData.teamId,
           parentId: parent1._id,
-          birthDate: new Date(childData.birthDate),
+          birthDate: childData.birthDate ? new Date(childData.birthDate) : new Date('2000-01-01'),
         };
 
         if (parent2) {

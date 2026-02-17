@@ -43,6 +43,15 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid gap-4 md:grid-cols-2">
           <Link
+            href="/educator/events"
+            className="block p-6 bg-white rounded-lg shadow hover:shadow-md border border-gray-200"
+          >
+            <h2 className="text-lg font-semibold text-gray-900">Gestion des événements</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Créer des entraînements, matchs et tournois.
+            </p>
+          </Link>
+          <Link
             href="/admin/create-family"
             className="block p-6 bg-white rounded-lg shadow hover:shadow-md border border-gray-200"
           >
@@ -76,15 +85,6 @@ export default function AdminPage() {
             <h2 className="text-lg font-semibold text-gray-900">Gérer les équipes</h2>
             <p className="mt-2 text-sm text-gray-600">
               Créer et gérer les équipes (U12, U15, etc.) pour les récurrences et événements.
-            </p>
-          </Link>
-          <Link
-            href="/educator/events"
-            className="block p-6 bg-white rounded-lg shadow hover:shadow-md border border-gray-200"
-          >
-            <h2 className="text-lg font-semibold text-gray-900">Gestion des événements</h2>
-            <p className="mt-2 text-sm text-gray-600">
-              Créer des entraînements, matchs et tournois.
             </p>
           </Link>
           <Link

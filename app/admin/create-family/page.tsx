@@ -24,7 +24,7 @@ export default function CreateFamilyPage() {
     parent2Name: '',
     parent2Email: '',
     role: 'parent' as 'parent' | 'educator' | 'admin',
-    children: [] as Array<{ name: string; teamId: string; birthDate: string }>,
+    children: [] as Array<{ name: string; teamId: string }>,
   });
 
   useEffect(() => {
@@ -86,7 +86,7 @@ export default function CreateFamilyPage() {
   const addChild = () => {
     setFormData({
       ...formData,
-      children: [...formData.children, { name: '', teamId: '', birthDate: '' }],
+      children: [...formData.children, { name: '', teamId: '' }],
     });
   };
 
@@ -265,7 +265,7 @@ export default function CreateFamilyPage() {
                       </button>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Nom de l&apos;enfant {formData.role !== 'admin' && index === 0 ? '*' : ''}
@@ -295,18 +295,6 @@ export default function CreateFamilyPage() {
                           </option>
                         ))}
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Date de naissance {formData.role !== 'admin' && index === 0 ? '*' : ''}
-                      </label>
-                      <input
-                        type="date"
-                        value={child.birthDate}
-                        onChange={(e) => updateChild(index, 'birthDate', e.target.value)}
-                        required={formData.role !== 'admin' && index === 0}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      />
                     </div>
                   </div>
                 </div>

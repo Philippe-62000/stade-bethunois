@@ -153,16 +153,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
       // Mettre à jour ou créer les enfants
       for (const childData of children) {
-        if (!childData.name || !childData.teamId || !childData.birthDate) {
+        if (!childData.name || !childData.teamId) {
           continue;
         }
 
+        const birthDate = childData.birthDate ? new Date(childData.birthDate) : new Date('2000-01-01');
+
         if (childData.id) {
-          // Mettre à jour l'enfant existant
+          // Mettre à jour l'enfant existant (conserver birthDate existant si non fourni)
           await Child.findByIdAndUpdate(childData.id, {
             name: childData.name,
             teamId: childData.teamId,
-            birthDate: new Date(childData.birthDate),
+            ...(childData.birthDate && { birthDate: new Date(childData.birthDate) }),
             ...(parent2 && { parentId2: parent2._id }),
           });
         } else {
@@ -172,7 +174,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             teamId: childData.teamId,
             parentId,
             ...(parent2 && { parentId2: parent2._id }),
-            birthDate: new Date(childData.birthDate),
+            birthDate,
           });
         }
       }

@@ -133,12 +133,6 @@ export default function EducatorEventsPage() {
                 Retour au menu
               </a>
               <button
-                onClick={() => router.push('/educator/teams')}
-                className="w-full sm:w-auto px-4 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 active:bg-gray-800 touch-manipulation min-h-[44px]"
-              >
-                Équipes
-              </button>
-              <button
                 onClick={() => setShowRecurrenceForm(true)}
                 className="w-full sm:w-auto px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 active:bg-green-800 touch-manipulation min-h-[44px]"
               >
@@ -156,7 +150,7 @@ export default function EducatorEventsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Calendar events={events} onDateClick={handleDateClick} onEventClick={handleEventClick} />
+        <Calendar events={events} selectedDate={selectedDate} onDateClick={handleDateClick} onEventClick={handleEventClick} />
       </div>
 
       {showCreateForm && (

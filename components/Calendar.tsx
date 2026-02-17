@@ -26,13 +26,14 @@ interface AvailabilityStatus {
 interface CalendarProps {
   events: CalendarEvent[];
   availabilities?: AvailabilityStatus[];
+  selectedDate?: Date | null;
   onDateClick?: (date: Date) => void;
   onEventClick?: (event: CalendarEvent) => void;
   onMonthAction?: (month: Date, status: 'present' | 'absent') => void;
   showMonthActions?: boolean;
 }
 
-export default function Calendar({ events, availabilities = [], onDateClick, onEventClick, onMonthAction, showMonthActions = false }: CalendarProps) {
+export default function Calendar({ events, availabilities = [], selectedDate = null, onDateClick, onEventClick, onMonthAction, showMonthActions = false }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showMonthButtons, setShowMonthButtons] = useState(false);
 
@@ -159,10 +160,13 @@ export default function Calendar({ events, availabilities = [], onDateClick, onE
         {daysInMonth.map(day => {
           const dayEvents = getEventsForDate(day);
           const isToday = isSameDay(day, new Date());
+          const isSelected = selectedDate ? isSameDay(day, selectedDate) : false;
           const dayStatus = getDayStatus(day);
           
           let bgColor = '';
-          if (dayStatus === 'present') {
+          if (isSelected) {
+            bgColor = 'bg-gray-200 border-gray-400';
+          } else if (dayStatus === 'present') {
             bgColor = 'bg-green-100 border-green-300';
           } else if (dayStatus === 'absent') {
             bgColor = 'bg-pink-100 border-pink-300';
@@ -180,7 +184,7 @@ export default function Calendar({ events, availabilities = [], onDateClick, onE
                 isToday && dayStatus === null ? 'border-blue-300' : ''
               }`}
             >
-              <div className={`text-xs md:text-sm font-medium ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
+              <div className={`text-xs md:text-sm font-medium ${isSelected ? 'text-gray-900 font-semibold' : isToday ? 'text-blue-600' : 'text-gray-700'}`}>
                 {format(day, 'd')}
               </div>
               <div className="flex flex-wrap gap-0.5 md:gap-1 mt-0.5 md:mt-1">

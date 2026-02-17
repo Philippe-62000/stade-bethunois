@@ -68,9 +68,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, teamId, birthDate, parentId: bodyParentId, parentId2: bodyParentId2 } = body;
 
-    if (!name || !teamId || !birthDate) {
+    if (!name || !teamId) {
       return NextResponse.json(
-        { error: 'Tous les champs sont requis' },
+        { error: 'Nom et équipe sont requis' },
         { status: 400 }
       );
     }
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       name,
       teamId,
       parentId,
-      birthDate: new Date(birthDate),
+      birthDate: birthDate ? new Date(birthDate) : new Date('2000-01-01'),
     };
 
     if (bodyParentId2) {

@@ -5,7 +5,7 @@ export interface IChild extends Document {
   parentId: mongoose.Types.ObjectId;
   parentId2?: mongoose.Types.ObjectId;
   teamId: mongoose.Types.ObjectId;
-  birthDate: Date;
+  birthDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,7 +33,8 @@ const ChildSchema = new Schema<IChild>(
     },
     birthDate: {
       type: Date,
-      required: true,
+      required: false,
+      default: () => new Date('2000-01-01'),
     },
   },
   {

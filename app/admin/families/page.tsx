@@ -282,7 +282,6 @@ function EditFamilyModal({
       id: c.id,
       name: c.name,
       teamId: teams.find(t => t.name === c.teamId.name)?._id || '',
-      birthDate: c.birthDate ? format(new Date(c.birthDate), 'yyyy-MM-dd') : '',
     })),
   });
   const [loading, setLoading] = useState(false);
@@ -291,7 +290,7 @@ function EditFamilyModal({
   const addChild = () => {
     setFormData({
       ...formData,
-      children: [...formData.children, { id: '', name: '', teamId: '', birthDate: '' }],
+      children: [...formData.children, { id: '', name: '', teamId: '' }],
     });
   };
 
@@ -429,7 +428,7 @@ function EditFamilyModal({
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Nom de l&apos;enfant {index === 0 ? '*' : ''}
@@ -459,18 +458,6 @@ function EditFamilyModal({
                         </option>
                       ))}
                     </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Date de naissance {index === 0 ? '*' : ''}
-                    </label>
-                    <input
-                      type="date"
-                      value={child.birthDate}
-                      onChange={(e) => updateChild(index, 'birthDate', e.target.value)}
-                      required={index === 0}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
                   </div>
                 </div>
               </div>
