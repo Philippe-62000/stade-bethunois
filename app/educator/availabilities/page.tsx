@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useReactToPrint } from 'react-to-print';
 
@@ -39,13 +39,21 @@ interface Availability {
   comment: string;
 }
 
+interface EventWithAvailabilities {
+  event: Event;
+  availabilities: Availability[];
+}
+
 export default function EducatorAvailabilitiesPage() {
   const router = useRouter();
   const printRef = useRef<HTMLDivElement>(null);
+  const printAllTeamsRef = useRef<HTMLDivElement>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [availabilities, setAvailabilities] = useState<Availability[]>([]);
   const [loading, setLoading] = useState(true);
+  const [allTeamsData, setAllTeamsData] = useState<EventWithAvailabilities[] | null>(null);
+  const [loadingAllTeams, setLoadingAllTeams] = useState(false);
 
   useEffect(() => {
     fetchEvents();
@@ -118,6 +126,42 @@ export default function EducatorAvailabilitiesPage() {
     contentRef: printRef,
     documentTitle: `Liste des joueurs - ${selectedEvent ? format(new Date(selectedEvent.date), 'dd-MM-yyyy', { locale: fr }) : ''}`,
   });
+
+  const handlePrintAllTeams = useReactToPrint({
+    contentRef: printAllTeamsRef,
+    documentTitle: selectedEvent ? `Présences toutes équipes - ${format(new Date(selectedEvent.date), 'dd-MM-yyyy', { locale: fr })}` : 'Présences',
+  });
+
+  const onPrintAllTeamsClick = async () => {
+    if (!selectedEvent) return;
+    setLoadingAllTeams(true);
+    try {
+      const selectedDate = new Date(selectedEvent.date);
+      const dayEvents = events.filter(e => isSameDay(new Date(e.date), selectedDate));
+      const results: EventWithAvailabilities[] = await Promise.all(
+        dayEvents.map(async (event) => {
+          const res = await fetch(`/api/availabilities?eventId=${event._id}`);
+          const data = await res.json();
+          return { event, availabilities: data.availabilities || [] };
+        })
+      );
+      setAllTeamsData(results);
+    } catch (e) {
+      console.error(e);
+      setLoadingAllTeams(false);
+    }
+  };
+
+  useEffect(() => {
+    if (allTeamsData && allTeamsData.length > 0) {
+      const timer = setTimeout(() => {
+        handlePrintAllTeams();
+        setAllTeamsData(null);
+        setLoadingAllTeams(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [allTeamsData]);
   
   const presentCount = availabilities.filter(a => a.status === 'present').length;
   const absentCount = availabilities.filter(a => a.status === 'absent').length;
@@ -210,14 +254,19 @@ export default function EducatorAvailabilitiesPage() {
                 </div>
 
                 <div className="mb-6 flex flex-wrap items-center gap-4">
-                  <div className="flex items-end">
-                    <button
-                      onClick={handlePrint}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
-                    >
-                      Imprimer en PDF
-                    </button>
-                  </div>
+                  <button
+                    onClick={handlePrint}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                  >
+                    Imprimer en PDF
+                  </button>
+                  <button
+                    onClick={onPrintAllTeamsClick}
+                    disabled={loadingAllTeams}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium disabled:opacity-50"
+                  >
+                    {loadingAllTeams ? 'Préparation...' : 'Imprimer en PDF toutes les équipes'}
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4 mb-6">
@@ -301,6 +350,49 @@ export default function EducatorAvailabilitiesPage() {
           </div>
         </div>
       </div>
+
+      {/* Zone cachée pour l'impression de toutes les équipes */}
+      {allTeamsData && allTeamsData.length > 0 && selectedEvent && (
+        <div ref={printAllTeamsRef} className="hidden print:block print:p-8 print:max-w-4xl print:mx-auto">
+          <style>{`
+            @media print {
+              @page { margin: 2cm; }
+              body { margin: 0; padding: 0; }
+            }
+          `}</style>
+          <div className="print:block">
+            <h2 className="text-xl font-bold mb-4 text-center">
+              Présences - {format(new Date(selectedEvent.date), 'EEEE d MMMM yyyy', { locale: fr })}
+            </h2>
+            {allTeamsData.map(({ event, availabilities: avs }) => (
+              <div key={event._id} className="mb-8 break-inside-avoid">
+                <h3 className="text-lg font-semibold mb-2 border-b pb-2">
+                  {getEventTypeLabel(event.type)} - {event.time} - {event.teamId?.name} ({event.teamId?.category})
+                </h3>
+                <p className="text-sm text-gray-600 mb-2">{event.location}</p>
+                <div className="space-y-1">
+                  {avs.length > 0 ? (
+                    avs.map((a) => {
+                      const statusInfo = getStatusLabel(a.status);
+                      return (
+                        <div key={a._id} className="flex justify-between py-1 border-b border-gray-200">
+                          <span className="font-medium">{a.childId?.name || '-'}</span>
+                          <span className={statusInfo.color}>{statusInfo.label}</span>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-gray-500 text-sm">Aucune présence déclarée</p>
+                  )}
+                </div>
+                <p className="text-sm font-medium mt-2">
+                  Présents : {avs.filter(a => a.status === 'present').length} | Absents : {avs.filter(a => a.status === 'absent').length} | En attente : {avs.filter(a => a.status === 'pending').length}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
