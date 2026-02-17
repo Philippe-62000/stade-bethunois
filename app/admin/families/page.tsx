@@ -3,9 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-
 interface Family {
   parent1: {
     id: string;
@@ -21,7 +18,6 @@ interface Family {
     id: string;
     name: string;
     teamId: { name: string; category: string };
-    birthDate: Date | string;
   }>;
 }
 
@@ -189,11 +185,6 @@ export default function AdminFamiliesPage() {
                                 <span className="text-gray-600 text-xs ml-2">
                                   ({child.teamId.name} {child.teamId.category && `- ${child.teamId.category}`})
                                 </span>
-                                {child.birthDate && (
-                                  <span className="text-gray-500 text-xs ml-2">
-                                    né(e) le {format(new Date(child.birthDate), 'dd/MM/yyyy', { locale: fr })}
-                                  </span>
-                                )}
                               </div>
                             ))}
                           </div>
