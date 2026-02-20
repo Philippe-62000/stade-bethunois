@@ -83,7 +83,7 @@ export default function EducatorAvailabilitiesPage() {
           if (dateParam) {
             const targetDate = new Date(dateParam);
             targetDate.setHours(0, 0, 0, 0);
-            const dayEvents = allEvents.filter(e => {
+            const dayEvents = allEvents.filter((e: Event) => {
               const eventDate = new Date(e.date);
               eventDate.setHours(0, 0, 0, 0);
               return eventDate.getTime() === targetDate.getTime();
