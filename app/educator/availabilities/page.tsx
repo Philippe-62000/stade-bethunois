@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -45,7 +45,7 @@ interface EventWithAvailabilities {
   availabilities: Availability[];
 }
 
-export default function EducatorAvailabilitiesPage() {
+function EducatorAvailabilitiesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const printRef = useRef<HTMLDivElement>(null);
@@ -422,5 +422,17 @@ export default function EducatorAvailabilitiesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function EducatorAvailabilitiesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-600">Chargement...</p>
+      </div>
+    }>
+      <EducatorAvailabilitiesContent />
+    </Suspense>
   );
 }
