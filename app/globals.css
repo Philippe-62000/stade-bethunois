@@ -24,3 +24,12 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Champs de formulaire : toujours fond clair et texte sombre pour lisibilité en mode sombre */
+input, select, textarea {
+  background-color: #ffffff !important;
+  color: #171717 !important;
+}
+input::placeholder, textarea::placeholder {
+  color: #737373;
+}
