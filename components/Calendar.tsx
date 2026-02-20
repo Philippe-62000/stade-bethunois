@@ -188,7 +188,7 @@ export default function Calendar({ events, availabilities = [], selectedDate = n
                 {format(day, 'd')}
               </div>
               <div className="flex flex-wrap gap-0.5 md:gap-1 mt-0.5 md:mt-1">
-                {dayEvents.slice(0, 2).map(event => (
+                {dayEvents.slice(0, 5).map(event => (
                   <div
                     key={event._id}
                     role="button"
@@ -204,12 +204,12 @@ export default function Calendar({ events, availabilities = [], selectedDate = n
                         onEventClick?.(event);
                       }
                     }}
-                    className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${getEventTypeColor(event.type)} ${onEventClick ? 'cursor-pointer hover:ring-2 hover:ring-offset-1 ring-gray-400' : ''}`}
+                    className={`w-4 h-4 md:w-5 md:h-5 rounded-full min-w-[20px] min-h-[20px] touch-manipulation ${getEventTypeColor(event.type)} ${onEventClick ? 'cursor-pointer hover:ring-2 hover:ring-offset-1 ring-gray-400' : ''}`}
                     title={onEventClick ? `Cliquer pour gérer : ${event.type} à ${event.time}` : `${event.type} à ${event.time}`}
                   />
                 ))}
-                {dayEvents.length > 2 && (
-                  <span className="text-[10px] md:text-xs text-gray-500">+{dayEvents.length - 2}</span>
+                {dayEvents.length > 5 && (
+                  <span className="text-[10px] md:text-xs text-gray-500">+{dayEvents.length - 5}</span>
                 )}
               </div>
             </div>
