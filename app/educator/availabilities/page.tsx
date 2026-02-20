@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useReactToPrint } from 'react-to-print';
@@ -47,6 +47,7 @@ interface EventWithAvailabilities {
 
 export default function EducatorAvailabilitiesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const printRef = useRef<HTMLDivElement>(null);
   const printAllTeamsRef = useRef<HTMLDivElement>(null);
   const [events, setEvents] = useState<Event[]>([]);
@@ -69,15 +70,28 @@ export default function EducatorAvailabilitiesPage() {
 
   const fetchEvents = async () => {
     try {
+      const dateParam = searchParams.get('date');
       const [eventsRes, eventTypesRes] = await Promise.all([
         fetch('/api/events'),
         fetch('/api/event-types'),
       ]);
       if (eventsRes.ok) {
         const data = await eventsRes.json();
-        setEvents(data.events || []);
-        if (data.events && data.events.length > 0) {
-          setSelectedEventId(data.events[0]._id);
+        const allEvents = data.events || [];
+        setEvents(allEvents);
+        if (allEvents.length > 0) {
+          if (dateParam) {
+            const targetDate = new Date(dateParam);
+            targetDate.setHours(0, 0, 0, 0);
+            const dayEvents = allEvents.filter(e => {
+              const eventDate = new Date(e.date);
+              eventDate.setHours(0, 0, 0, 0);
+              return eventDate.getTime() === targetDate.getTime();
+            });
+            setSelectedEventId(dayEvents.length > 0 ? dayEvents[0]._id : null);
+          } else {
+            setSelectedEventId(allEvents[0]._id);
+          }
         }
       }
       if (eventTypesRes.ok) {
@@ -116,6 +130,16 @@ export default function EducatorAvailabilitiesPage() {
     }
   };
 
+  const dateParam = searchParams.get('date');
+  const displayedEvents = dateParam
+    ? events.filter(e => {
+        const eventDate = new Date(e.date);
+        eventDate.setHours(0, 0, 0, 0);
+        const target = new Date(dateParam);
+        target.setHours(0, 0, 0, 0);
+        return eventDate.getTime() === target.getTime();
+      })
+    : events;
   const selectedEvent = events.find(e => e._id === selectedEventId);
 
   const handlePrint = useReactToPrint({
@@ -199,9 +223,13 @@ export default function EducatorAvailabilitiesPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-md p-4">
-              <h2 className="text-lg font-semibold mb-4">Événements</h2>
+              <h2 className="text-lg font-semibold mb-4">
+                {dateParam
+                  ? `Événements du ${format(new Date(dateParam), 'dd MMMM yyyy', { locale: fr })}`
+                  : 'Événements'}
+              </h2>
               <div className="space-y-2 max-h-96 overflow-y-auto">
-                {events.map(event => (
+                {displayedEvents.map(event => (
                   <button
                     key={event._id}
                     onClick={() => setSelectedEventId(event._id)}
@@ -340,7 +368,11 @@ export default function EducatorAvailabilitiesPage() {
               </div>
             ) : (
               <div className="bg-white rounded-lg shadow-md p-6">
-                <p className="text-gray-500 text-center">Sélectionnez un événement</p>
+                <p className="text-gray-500 text-center">
+                  {dateParam && displayedEvents.length === 0
+                    ? `Aucun événement le ${format(new Date(dateParam), 'dd/MM/yyyy', { locale: fr })}`
+                    : 'Sélectionnez un événement'}
+                </p>
               </div>
             )}
           </div>

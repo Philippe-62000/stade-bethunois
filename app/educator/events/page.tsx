@@ -76,12 +76,8 @@ export default function EducatorEventsPage() {
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
     const dayEvents = events.filter(e => isSameDay(new Date(e.date), date));
-    if (dayEvents.length > 0) {
-      setDayEventsList(dayEvents);
-      setShowDayEventsModal(true);
-    } else {
-      setShowCreateForm(true);
-    }
+    setDayEventsList(dayEvents);
+    setShowDayEventsModal(true);
   };
 
   const handleEventClick = (event: CalendarEvent) => {
@@ -203,7 +199,10 @@ export default function EducatorEventsPage() {
               Événements du {format(selectedDate, 'dd MMMM yyyy', { locale: fr })}
             </h2>
             <ul className="space-y-2 mb-4">
-              {dayEventsList.map(ev => (
+              {dayEventsList.length === 0 ? (
+                <p className="text-gray-500 text-sm py-4">Aucun événement ce jour</p>
+              ) : (
+                dayEventsList.map(ev => (
                 <li key={ev._id}>
                   <button
                     type="button"
@@ -227,7 +226,8 @@ export default function EducatorEventsPage() {
                     </div>
                   </button>
                 </li>
-              ))}
+              ))
+              )}
             </ul>
             <div className="flex flex-wrap gap-2">
               <button
@@ -240,6 +240,12 @@ export default function EducatorEventsPage() {
               >
                 Créer un événement
               </button>
+              <a
+                href={`/educator/availabilities?date=${format(selectedDate, 'yyyy-MM-dd')}`}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              >
+                Présences
+              </a>
               <button
                 type="button"
                 onClick={() => setShowDayEventsModal(false)}

@@ -95,12 +95,14 @@ export default function ParentCalendarPage() {
   };
 
   const handleDateClick = (date: Date) => {
-    setSelectedDate(date);
     const dayEvents = filteredEvents.filter(event => {
       const eventDate = new Date(event.date);
       return eventDate.toDateString() === date.toDateString();
     });
-    setSelectedEvents(dayEvents);
+    if (dayEvents.length > 0) {
+      setSelectedDate(date);
+      setSelectedEvents(dayEvents);
+    }
   };
 
   const handleAvailabilityChange = async (eventId: string, status: 'present' | 'absent') => {
