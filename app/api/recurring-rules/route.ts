@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import RecurringRule from '@/models/RecurringRule';
 import Event from '@/models/Event';
+import EventType from '@/models/EventType';
 import '@/models/Team';
 import '@/models/Child';
 import '@/models/User';
@@ -86,6 +87,14 @@ export async function POST(request: NextRequest) {
     if (!type || dayOfWeek === undefined || !time || !location || !startDate || !periodType || teamIdsArray.length === 0) {
       return NextResponse.json(
         { error: 'Tous les champs requis sont manquants (dont au moins une équipe)' },
+        { status: 400 }
+      );
+    }
+
+    const eventTypeDoc = await EventType.findOne({ key: type });
+    if (!eventTypeDoc) {
+      return NextResponse.json(
+        { error: 'Type d\'événement invalide' },
         { status: 400 }
       );
     }

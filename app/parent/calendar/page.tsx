@@ -5,10 +5,11 @@ import Link from 'next/link';
 import Calendar from '@/components/Calendar';
 import { format, startOfMonth, endOfMonth, isSameMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { getEventTypeLabel } from '@/lib/eventTypes';
 
 interface Event {
   _id: string;
-  type: 'training' | 'match' | 'tournament';
+  type: string;
   date: string;
   time: string;
   location: string;
@@ -41,6 +42,7 @@ interface Availability {
 
 export default function ParentCalendarPage() {
   const [events, setEvents] = useState<Event[]>([]);
+  const [eventTypes, setEventTypes] = useState<{ key: string; label: string }[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [availabilities, setAvailabilities] = useState<Availability[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -54,10 +56,11 @@ export default function ParentCalendarPage() {
 
   const fetchData = async () => {
     try {
-      const [eventsRes, childrenRes, availabilitiesRes] = await Promise.all([
+      const [eventsRes, childrenRes, availabilitiesRes, eventTypesRes] = await Promise.all([
         fetch('/api/events'),
         fetch('/api/children'),
         fetch('/api/availabilities'),
+        fetch('/api/event-types'),
       ]);
 
       if (eventsRes.ok) {
@@ -78,6 +81,11 @@ export default function ParentCalendarPage() {
       if (availabilitiesRes.ok) {
         const availabilitiesData = await availabilitiesRes.json();
         setAvailabilities(availabilitiesData.availabilities || []);
+      }
+
+      if (eventTypesRes.ok) {
+        const etData = await eventTypesRes.json();
+        setEventTypes(etData.eventTypes || []);
       }
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
@@ -189,19 +197,6 @@ export default function ParentCalendarPage() {
 
   const selectedChild = children.find(c => c._id === selectedChildId);
 
-  const getEventTypeLabel = (type: string) => {
-    switch (type) {
-      case 'training':
-        return 'Entraînement';
-      case 'match':
-        return 'Match';
-      case 'tournament':
-        return 'Tournoi';
-      default:
-        return type;
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -301,7 +296,7 @@ export default function ParentCalendarPage() {
                         <div key={event._id} className="border-b pb-4 last:border-b-0">
                           <div className="mb-2">
                             <span className="inline-block px-2 py-1 text-xs font-semibold rounded bg-blue-100 text-blue-800">
-                              {getEventTypeLabel(event.type)}
+                              {getEventTypeLabel(event.type, eventTypes)}
                             </span>
                             <p className="text-sm text-gray-600 mt-1">
                               {event.time} - {event.location}

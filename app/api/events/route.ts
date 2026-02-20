@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Event from '@/models/Event';
+import EventType from '@/models/EventType';
 import '@/models/Team';
 import '@/models/Child';
 import '@/models/User';
@@ -109,6 +110,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const eventTypeDoc = await EventType.findOne({ key: type });
+    if (!eventTypeDoc) {
+      return NextResponse.json(
+        { error: 'Type d\'événement invalide' },
+        { status: 400 }
+      );
+    }
+
     const event = await Event.create({
       type,
       date: new Date(date),
@@ -150,7 +159,7 @@ export async function POST(request: NextRequest) {
             await sendCreationEmail({
               parent_name: parent.name,
               child_name: child.name,
-              event_type: type === 'training' ? 'Entraînement' : type === 'match' ? 'Match' : 'Tournoi',
+              event_type: eventTypeDoc.label,
               event_date: eventDate,
               event_time: time,
               event_location: location,

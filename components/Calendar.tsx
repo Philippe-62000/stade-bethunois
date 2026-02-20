@@ -6,7 +6,7 @@ import { fr } from 'date-fns/locale';
 
 export interface CalendarEvent {
   _id: string;
-  type: 'training' | 'match' | 'tournament';
+  type: string;
   date: string;
   time: string;
   location: string;
@@ -204,7 +204,7 @@ export default function Calendar({ events, availabilities = [], selectedDate = n
                         onEventClick?.(event);
                       }
                     }}
-                    className={`w-4 h-4 md:w-5 md:h-5 rounded-full min-w-[20px] min-h-[20px] touch-manipulation ${getEventTypeColor(event.type)} ${onEventClick ? 'cursor-pointer hover:ring-2 hover:ring-offset-1 ring-gray-400' : ''}`}
+                    className={`w-[10px] h-[10px] md:w-5 md:h-5 rounded-full touch-manipulation ${getEventTypeColor(event.type)} ${onEventClick ? 'cursor-pointer hover:ring-2 hover:ring-offset-1 ring-gray-400' : ''}`}
                     title={onEventClick ? `Cliquer pour gérer : ${event.type} à ${event.time}` : `${event.type} à ${event.time}`}
                   />
                 ))}

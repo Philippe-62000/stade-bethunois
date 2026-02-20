@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IRecurringRule extends Document {
-  type: 'training' | 'match' | 'tournament';
+  type: string;
   dayOfWeek: number; // 0=dimanche, 1=lundi, etc.
   time: string; // "18:00"
   endTime?: string; // "19:30" optionnel
@@ -21,7 +21,6 @@ const RecurringRuleSchema = new Schema<IRecurringRule>(
   {
     type: {
       type: String,
-      enum: ['training', 'match', 'tournament'],
       required: true,
     },
     dayOfWeek: {

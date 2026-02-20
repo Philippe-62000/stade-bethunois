@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IEvent extends Document {
-  type: 'training' | 'match' | 'tournament';
+  type: string;
   date: Date;
   time: string;
   endTime?: string;
@@ -21,7 +21,6 @@ const EventSchema = new Schema<IEvent>(
   {
     type: {
       type: String,
-      enum: ['training', 'match', 'tournament'],
       required: true,
     },
     date: {

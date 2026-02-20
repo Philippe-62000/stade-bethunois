@@ -10,6 +10,13 @@ interface Place {
   name: string;
 }
 
+interface EventType {
+  _id: string;
+  key: string;
+  label: string;
+  order: number;
+}
+
 interface Admin {
   _id: string;
   name: string;
@@ -20,11 +27,14 @@ interface Admin {
 export default function AdminSettingsPage() {
   const router = useRouter();
   const [places, setPlaces] = useState<Place[]>([]);
+  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [newPlaceName, setNewPlaceName] = useState('');
+  const [newEventTypeLabel, setNewEventTypeLabel] = useState('');
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [error, setError] = useState('');
+  const [eventTypeError, setEventTypeError] = useState('');
   const [editingAdmin, setEditingAdmin] = useState<Admin | null>(null);
   const [deletingAdminId, setDeletingAdminId] = useState<string | null>(null);
 
@@ -38,6 +48,7 @@ export default function AdminSettingsPage() {
         }
         setCheckingAuth(false);
         fetchPlaces();
+        fetchEventTypes();
         fetchAdmins();
       })
       .catch(() => router.replace('/login'));
@@ -49,6 +60,60 @@ export default function AdminSettingsPage() {
       if (res.ok) {
         const data = await res.json();
         setPlaces(data.places || []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchEventTypes = async () => {
+    try {
+      const res = await fetch('/api/event-types', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setEventTypes(data.eventTypes || []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleAddEventType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEventTypeError('');
+    const label = newEventTypeLabel.trim();
+    if (!label) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/event-types', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ label }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEventTypeError(data.error || 'Erreur');
+        return;
+      }
+      setNewEventTypeLabel('');
+      setEventTypes((prev) => [...prev, data.eventType]);
+    } catch (e) {
+      setEventTypeError('Erreur');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteEventType = async (id: string) => {
+    if (!confirm('Supprimer ce type d\'événement ?')) return;
+    try {
+      const res = await fetch(`/api/event-types/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (res.ok) {
+        setEventTypes((prev) => prev.filter((et) => et._id !== id));
       }
     } catch (e) {
       console.error(e);
@@ -285,6 +350,55 @@ export default function AdminSettingsPage() {
                   <button
                     type="button"
                     onClick={() => handleDeletePlace(place._id)}
+                    className="text-sm text-red-600 hover:underline"
+                  >
+                    Supprimer
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+          <h2 className="text-lg font-semibold mb-4">Événements</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Les types d'événements définis ici seront proposés lors de la création d'un événement ou d'une récurrence (ex. Entraînement, Match, Tournoi).
+          </p>
+          {eventTypeError && (
+            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded text-sm">
+              {eventTypeError}
+            </div>
+          )}
+          <form onSubmit={handleAddEventType} className="flex gap-2 mb-6">
+            <input
+              type="text"
+              value={newEventTypeLabel}
+              onChange={(e) => setNewEventTypeLabel(e.target.value)}
+              placeholder="Ex. Entraînement, Match, Tournoi"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            >
+              {loading ? 'Ajout...' : 'Ajouter'}
+            </button>
+          </form>
+          <ul className="space-y-2">
+            {eventTypes.length === 0 ? (
+              <p className="text-gray-500 text-sm">Aucun type. Ajoutez-en un ci-dessus.</p>
+            ) : (
+              eventTypes.map((et) => (
+                <li
+                  key={et._id}
+                  className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0"
+                >
+                  <span className="font-medium">{et.label}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteEventType(et._id)}
                     className="text-sm text-red-600 hover:underline"
                   >
                     Supprimer

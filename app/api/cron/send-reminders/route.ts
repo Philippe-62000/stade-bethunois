@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Event from '@/models/Event';
+import EventType from '@/models/EventType';
 import Availability from '@/models/Availability';
 import Child from '@/models/Child';
 import User from '@/models/User';
@@ -89,10 +90,12 @@ export async function GET(request: NextRequest) {
           const link = `${baseUrl}/parent/calendar`;
 
           try {
+            const eventTypeDoc = await EventType.findOne({ key: event.type });
+            const eventTypeLabel = eventTypeDoc?.label ?? event.type;
             await sendReminderEmail({
               parent_name: parent.name,
               child_name: child.name,
-              event_type: event.type === 'training' ? 'Entraînement' : event.type === 'match' ? 'Match' : 'Tournoi',
+              event_type: eventTypeLabel,
               event_date: eventDate,
               event_time: event.time,
               event_location: event.location,

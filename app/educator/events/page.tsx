@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Calendar, { type CalendarEvent } from '@/components/Calendar';
 import { format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { getEventTypeLabel } from '@/lib/eventTypes';
 
 interface Team {
   _id: string;
@@ -23,6 +24,7 @@ export default function EducatorEventsPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [places, setPlaces] = useState<{ _id: string; name: string }[]>([]);
+  const [eventTypes, setEventTypes] = useState<{ _id: string; key: string; label: string }[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showRecurrenceForm, setShowRecurrenceForm] = useState(false);
@@ -38,10 +40,11 @@ export default function EducatorEventsPage() {
 
   const fetchData = async () => {
     try {
-      const [eventsRes, teamsRes, placesRes] = await Promise.all([
+      const [eventsRes, teamsRes, placesRes, eventTypesRes] = await Promise.all([
         fetch('/api/events'),
         fetch('/api/teams'),
         fetch('/api/places'),
+        fetch('/api/event-types'),
       ]);
 
       if (eventsRes.ok) {
@@ -57,6 +60,11 @@ export default function EducatorEventsPage() {
       if (placesRes.ok) {
         const placesData = await placesRes.json();
         setPlaces(placesData.places || []);
+      }
+
+      if (eventTypesRes.ok) {
+        const eventTypesData = await eventTypesRes.json();
+        setEventTypes(eventTypesData.eventTypes || []);
       }
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
@@ -157,6 +165,7 @@ export default function EducatorEventsPage() {
         <CreateEventForm
           teams={teams}
           places={places}
+          eventTypes={eventTypes}
           children={children}
           selectedDate={selectedDate}
           onTeamChange={handleTeamChange}
@@ -176,6 +185,7 @@ export default function EducatorEventsPage() {
         <CreateRecurrenceForm
           teams={teams}
           places={places}
+          eventTypes={eventTypes}
           children={children}
           onTeamChange={handleTeamChange}
           onClose={() => setShowRecurrenceForm(false)}
@@ -206,7 +216,7 @@ export default function EducatorEventsPage() {
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="font-medium">
-                          {ev.type === 'training' ? 'Entraînement' : ev.type === 'match' ? 'Match' : 'Tournoi'} — {ev.time}
+                          {getEventTypeLabel(ev.type, eventTypes)} — {ev.time}
                         </div>
                         <div className="text-sm text-gray-600 mt-1">
                           <div><strong>Lieu:</strong> {ev.location}</div>
@@ -247,7 +257,7 @@ export default function EducatorEventsPage() {
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <h2 className="text-xl font-bold mb-2">Supprimer cet événement ?</h2>
             <p className="text-gray-600 mb-4">
-              {selectedEventForDelete.type === 'training' ? 'Entraînement' : selectedEventForDelete.type === 'match' ? 'Match' : 'Tournoi'} — {format(new Date(selectedEventForDelete.date), 'dd/MM/yyyy', { locale: fr })} à {selectedEventForDelete.time}
+              {getEventTypeLabel(selectedEventForDelete.type, eventTypes)} — {format(new Date(selectedEventForDelete.date), 'dd/MM/yyyy', { locale: fr })} à {selectedEventForDelete.time}
               {selectedEventForDelete.teamId?.name && ` (${selectedEventForDelete.teamId.name})`}
             </p>
             <div className="flex flex-col gap-2">
@@ -285,6 +295,7 @@ export default function EducatorEventsPage() {
 function CreateEventForm({
   teams,
   places,
+  eventTypes,
   children,
   selectedDate,
   onTeamChange,
@@ -293,6 +304,7 @@ function CreateEventForm({
 }: {
   teams: Team[];
   places: { _id: string; name: string }[];
+  eventTypes: { _id: string; key: string; label: string }[];
   children: Child[];
   selectedDate: Date | null;
   onTeamChange: (teamId: string) => void;
@@ -300,8 +312,9 @@ function CreateEventForm({
   onSuccess: () => void;
 }) {
   const router = useRouter();
+  const defaultType = eventTypes.length > 0 ? eventTypes[0].key : 'training';
   const [formData, setFormData] = useState({
-    type: 'training' as 'training' | 'match' | 'tournament',
+    type: defaultType,
     date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
     time: '18:00',
     location: '',
@@ -385,12 +398,22 @@ function CreateEventForm({
             </label>
             <select
               value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
-              <option value="training">Entraînement</option>
-              <option value="match">Match</option>
-              <option value="tournament">Tournoi</option>
+              {eventTypes.length === 0 ? (
+                <>
+                  <option value="training">Entraînement</option>
+                  <option value="match">Match</option>
+                  <option value="tournament">Tournoi</option>
+                </>
+              ) : (
+                eventTypes.map((et) => (
+                  <option key={et._id} value={et.key}>
+                    {et.label}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
@@ -595,6 +618,7 @@ function CreateEventForm({
 function CreateRecurrenceForm({
   teams,
   places,
+  eventTypes,
   children,
   onTeamChange,
   onClose,
@@ -602,14 +626,16 @@ function CreateRecurrenceForm({
 }: {
   teams: Team[];
   places: { _id: string; name: string }[];
+  eventTypes: { _id: string; key: string; label: string }[];
   children: Child[];
   onTeamChange: (teamId: string) => void;
   onClose: () => void;
   onSuccess: () => void;
 }) {
   const router = useRouter();
+  const defaultType = eventTypes.length > 0 ? eventTypes[0].key : 'training';
   const [formData, setFormData] = useState({
-    type: 'training' as 'training' | 'match' | 'tournament',
+    type: defaultType,
     dayOfWeek: '1',
     time: '18:00',
     endTime: '',
@@ -748,12 +774,22 @@ function CreateRecurrenceForm({
             </label>
             <select
               value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
-              <option value="training">Entraînement</option>
-              <option value="match">Match</option>
-              <option value="tournament">Tournoi</option>
+              {eventTypes.length === 0 ? (
+                <>
+                  <option value="training">Entraînement</option>
+                  <option value="match">Match</option>
+                  <option value="tournament">Tournoi</option>
+                </>
+              ) : (
+                eventTypes.map((et) => (
+                  <option key={et._id} value={et.key}>
+                    {et.label}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 

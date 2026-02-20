@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useReactToPrint } from 'react-to-print';
+import { getEventTypeLabel } from '@/lib/eventTypes';
 
 interface Event {
   _id: string;
-  type: 'training' | 'match' | 'tournament';
+  type: string;
   date: string;
   time: string;
   location: string;
@@ -49,6 +50,7 @@ export default function EducatorAvailabilitiesPage() {
   const printRef = useRef<HTMLDivElement>(null);
   const printAllTeamsRef = useRef<HTMLDivElement>(null);
   const [events, setEvents] = useState<Event[]>([]);
+  const [eventTypes, setEventTypes] = useState<{ key: string; label: string }[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [availabilities, setAvailabilities] = useState<Availability[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,13 +69,20 @@ export default function EducatorAvailabilitiesPage() {
 
   const fetchEvents = async () => {
     try {
-      const response = await fetch('/api/events');
-      if (response.ok) {
-        const data = await response.json();
+      const [eventsRes, eventTypesRes] = await Promise.all([
+        fetch('/api/events'),
+        fetch('/api/event-types'),
+      ]);
+      if (eventsRes.ok) {
+        const data = await eventsRes.json();
         setEvents(data.events || []);
         if (data.events && data.events.length > 0) {
           setSelectedEventId(data.events[0]._id);
         }
+      }
+      if (eventTypesRes.ok) {
+        const etData = await eventTypesRes.json();
+        setEventTypes(etData.eventTypes || []);
       }
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
@@ -91,19 +100,6 @@ export default function EducatorAvailabilitiesPage() {
       }
     } catch (error) {
       console.error('Erreur lors du chargement des disponibilités:', error);
-    }
-  };
-
-  const getEventTypeLabel = (type: string) => {
-    switch (type) {
-      case 'training':
-        return 'Entraînement';
-      case 'match':
-        return 'Match';
-      case 'tournament':
-        return 'Tournoi';
-      default:
-        return type;
     }
   };
 
@@ -219,7 +215,7 @@ export default function EducatorAvailabilitiesPage() {
                       {format(new Date(event.date), 'dd/MM/yyyy', { locale: fr })}
                     </div>
                     <div className="text-xs text-gray-600">
-                      {getEventTypeLabel(event.type)} - {event.time}
+                      {getEventTypeLabel(event.type, eventTypes)} - {event.time}
                     </div>
                     <div className="text-xs font-medium text-blue-600 mt-1">
                       {event.teamId?.name} {event.teamId?.category && `(${event.teamId.category})`}
@@ -235,7 +231,7 @@ export default function EducatorAvailabilitiesPage() {
               <div className="bg-white rounded-lg shadow-md p-6">
                 <div className="mb-6">
                   <h2 className="text-xl font-bold mb-2">
-                    {getEventTypeLabel(selectedEvent.type)}
+                    {getEventTypeLabel(selectedEvent.type, eventTypes)}
                   </h2>
                   <div className="text-sm text-gray-600 space-y-1">
                     <p>
@@ -367,7 +363,7 @@ export default function EducatorAvailabilitiesPage() {
             {allTeamsData.map(({ event, availabilities: avs }) => (
               <div key={event._id} className="mb-8 break-inside-avoid">
                 <h3 className="text-lg font-semibold mb-2 border-b pb-2">
-                  {getEventTypeLabel(event.type)} - {event.time} - {event.teamId?.name} ({event.teamId?.category})
+                  {getEventTypeLabel(event.type, eventTypes)} - {event.time} - {event.teamId?.name} ({event.teamId?.category})
                 </h3>
                 <p className="text-sm text-gray-600 mb-2">{event.location}</p>
                 <div className="space-y-1">
