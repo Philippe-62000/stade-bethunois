@@ -34,10 +34,15 @@ export async function GET(request: NextRequest) {
 
     let query: any = {};
 
-    // Les parents voient les événements de leurs enfants
+    // Les parents voient les événements de leurs enfants (parent 1 ou parent 2)
     if (authUser.role === 'parent') {
       const Child = (await import('@/models/Child')).default;
-      const children = await Child.find({ parentId: authUser.userId });
+      const children = await Child.find({
+        $or: [
+          { parentId: authUser.userId },
+          { parentId2: authUser.userId }
+        ]
+      });
       const childIds = children.map(c => c._id);
       
       query = {

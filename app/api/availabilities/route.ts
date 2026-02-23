@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
         status,
         comment: comment || '',
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     const populatedAvailability = await Availability.findById(availability._id)
