@@ -4,6 +4,7 @@ import Availability from '@/models/Availability';
 import Child from '@/models/Child';
 import Event from '@/models/Event';
 import '@/models/User';
+import '@/models/Team';
 import { getAuthUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
