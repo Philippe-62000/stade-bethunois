@@ -24,9 +24,14 @@ export async function GET(request: NextRequest) {
 
     let query: any = {};
 
-    // Les parents voient uniquement les disponibilités de leurs enfants
+    // Les parents voient uniquement les disponibilités de leurs enfants (parent 1 ou parent 2)
     if (authUser.role === 'parent') {
-      const children = await Child.find({ parentId: authUser.userId });
+      const children = await Child.find({
+        $or: [
+          { parentId: authUser.userId },
+          { parentId2: authUser.userId }
+        ]
+      });
       const childIds = children.map(c => c._id);
       query.childId = { $in: childIds };
     }
@@ -92,8 +97,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier que l'enfant appartient au parent
-    const child = await Child.findOne({ _id: childId, parentId: authUser.userId }).populate('teamId');
+    // Vérifier que l'enfant appartient au parent (parent 1 ou parent 2)
+    const child = await Child.findOne({
+      _id: childId,
+      $or: [
+        { parentId: authUser.userId },
+        { parentId2: authUser.userId }
+      ]
+    }).populate('teamId');
     if (!child) {
       return NextResponse.json(
         { error: 'Enfant non trouvé ou non autorisé' },

@@ -349,9 +349,11 @@ function EditChildModal({
   onSuccess: () => void;
 }) {
   const parentId = typeof child.parentId === 'object' ? child.parentId._id : child.parentId;
+  const parentId2 = child.parentId2 && typeof child.parentId2 === 'object' ? child.parentId2._id : (child.parentId2 || '');
   const teamId = typeof child.teamId === 'object' ? child.teamId._id : child.teamId;
   const [name, setName] = useState(child.name);
   const [selectedParentId, setSelectedParentId] = useState(parentId);
+  const [selectedParentId2, setSelectedParentId2] = useState(parentId2);
   const [selectedTeamId, setSelectedTeamId] = useState(teamId);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -368,6 +370,7 @@ function EditChildModal({
         body: JSON.stringify({
           name,
           parentId: selectedParentId,
+          parentId2: selectedParentId2 || null,
           teamId: selectedTeamId,
         }),
       });
@@ -403,7 +406,7 @@ function EditChildModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Parent</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Parent 1</label>
             <select
               value={selectedParentId}
               onChange={(e) => setSelectedParentId(e.target.value)}
@@ -411,6 +414,21 @@ function EditChildModal({
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
               {parents.map((p) => (
+                <option key={p._id} value={p._id}>
+                  {p.name} ({p.email})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Parent 2 (optionnel)</label>
+            <select
+              value={selectedParentId2}
+              onChange={(e) => setSelectedParentId2(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="">Aucun</option>
+              {parents.filter((p) => p._id !== selectedParentId).map((p) => (
                 <option key={p._id} value={p._id}>
                   {p.name} ({p.email})
                 </option>

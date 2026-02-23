@@ -31,19 +31,26 @@ export async function PATCH(
       );
     }
 
-    // Un parent ne peut modifier que ses propres enfants
-    if (authUser.role === 'parent' && String(child.parentId) !== authUser.userId) {
-      return NextResponse.json(
-        { error: 'Non autorisé' },
-        { status: 403 }
-      );
+    // Un parent ne peut modifier que ses propres enfants (parent 1 ou parent 2)
+    if (authUser.role === 'parent') {
+      const isParent1 = String(child.parentId) === authUser.userId;
+      const isParent2 = child.parentId2 && String(child.parentId2) === authUser.userId;
+      if (!isParent1 && !isParent2) {
+        return NextResponse.json(
+          { error: 'Non autorisé' },
+          { status: 403 }
+        );
+      }
     }
 
     const updates: Record<string, unknown> = {};
     if (body.name !== undefined) updates.name = body.name;
     if (body.teamId !== undefined) updates.teamId = body.teamId;
     if (body.birthDate !== undefined) updates.birthDate = new Date(body.birthDate);
-    if (authUser.role === 'admin' && body.parentId !== undefined) updates.parentId = body.parentId;
+    if (authUser.role === 'admin') {
+      if (body.parentId !== undefined) updates.parentId = body.parentId;
+      if (body.parentId2 !== undefined) updates.parentId2 = body.parentId2 || null;
+    }
 
     const updated = await Child.findByIdAndUpdate(
       id,
@@ -51,6 +58,7 @@ export async function PATCH(
       { new: true }
     )
       .populate('parentId', 'name email')
+      .populate('parentId2', 'name email')
       .populate('teamId', 'name category');
 
     return NextResponse.json({ child: updated });
