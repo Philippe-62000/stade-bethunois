@@ -11,7 +11,7 @@ export interface CalendarEvent {
   time: string;
   location: string;
   teamId: { _id?: string; name: string; category?: string };
-  selectedChildrenIds?: string[] | null;
+  selectedChildrenIds?: Array<string | { _id: string; name?: string }> | null;
   isRecurring?: boolean;
   recurringRuleId?: string | null;
 }
