@@ -13,8 +13,9 @@ interface Event {
   date: string;
   time: string;
   location: string;
-  selectedChildrenIds?: string[] | null;
+  selectedChildrenIds?: Array<string | { _id: string; name?: string }> | null;
   teamId: {
+    _id?: string;
     name: string;
     category: string;
   };
@@ -24,6 +25,7 @@ interface Child {
   _id: string;
   name: string;
   teamId: {
+    _id?: string;
     name: string;
     category: string;
   };
@@ -38,6 +40,23 @@ interface Availability {
     _id: string;
   };
   status: 'present' | 'absent' | 'pending';
+}
+
+/** Vérifie si l'enfant est dans selectedChildrenIds (gère objets peuplés ou IDs) */
+function eventAppliesToChild(event: Event, childId: string, child: Child): boolean {
+  const ids = event.selectedChildrenIds;
+  if (ids && ids.length > 0) {
+    return ids.some((c: unknown) => {
+      const id = typeof c === 'object' && c !== null && '_id' in c ? (c as { _id: string })._id : c;
+      return id && String(id) === String(childId);
+    });
+  }
+  const childTeam = child.teamId as { _id?: string; name?: string; category?: string } | undefined;
+  const eventTeam = event.teamId as { _id?: string; name?: string; category?: string } | undefined;
+  if (childTeam?._id && eventTeam?._id) {
+    return String(childTeam._id) === String(eventTeam._id);
+  }
+  return childTeam?.name === eventTeam?.name && childTeam?.category === eventTeam?.category;
 }
 
 export default function ParentCalendarPage() {
@@ -146,11 +165,7 @@ export default function ParentCalendarPage() {
     try {
       const promises = [];
       for (const event of monthEvents) {
-        const isRelevant = event.selectedChildrenIds && event.selectedChildrenIds.length > 0
-          ? event.selectedChildrenIds.includes(selectedChildId)
-          : selectedChild.teamId?.name === event.teamId?.name && selectedChild.teamId?.category === event.teamId?.category;
-        
-        if (isRelevant) {
+        if (eventAppliesToChild(event, selectedChildId, selectedChild)) {
           promises.push(
             fetch('/api/availabilities', {
               method: 'POST',
@@ -174,13 +189,9 @@ export default function ParentCalendarPage() {
   // Filtrer les événements et disponibilités selon l'enfant sélectionné
   const filteredEvents = selectedChildId
     ? events.filter(event => {
-        if (event.selectedChildrenIds && event.selectedChildrenIds.length > 0) {
-          return event.selectedChildrenIds.includes(selectedChildId);
-        }
         const child = children.find(c => c._id === selectedChildId);
         if (!child) return false;
-        // Comparer name ET category pour distinguer U9 1, U9 2, U9 3
-        return child.teamId?.name === event.teamId?.name && child.teamId?.category === event.teamId?.category;
+        return eventAppliesToChild(event, selectedChildId, child);
       })
     : events;
 
@@ -281,12 +292,7 @@ export default function ParentCalendarPage() {
                       if (!selectedChildId) return null;
                       const selectedChild = children.find(c => c._id === selectedChildId);
                       if (!selectedChild) return null;
-                      
-                      const isRelevant = event.selectedChildrenIds && event.selectedChildrenIds.length > 0
-                        ? event.selectedChildrenIds.includes(selectedChildId)
-                        : selectedChild.teamId?.name === event.teamId?.name && selectedChild.teamId?.category === event.teamId?.category;
-                      
-                      if (!isRelevant) return null;
+                      if (!eventAppliesToChild(event, selectedChildId, selectedChild)) return null;
 
                       const availability = availabilities.find(av => {
                         const avEventId = typeof av.eventId === 'object' ? av.eventId._id : av.eventId;
