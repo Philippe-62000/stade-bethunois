@@ -194,14 +194,16 @@ export default function Calendar({ events, availabilities = [], selectedDate = n
                     role="button"
                     tabIndex={0}
                     onClick={(e) => {
-                      e.stopPropagation();
-                      onEventClick?.(event);
+                      if (onEventClick) {
+                        e.stopPropagation();
+                        onEventClick(event);
+                      }
                     }}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
+                      if (onEventClick && (e.key === 'Enter' || e.key === ' ')) {
                         e.preventDefault();
                         e.stopPropagation();
-                        onEventClick?.(event);
+                        onEventClick(event);
                       }
                     }}
                     className={`w-[10px] h-[10px] md:w-5 md:h-5 rounded-full touch-manipulation ${getEventTypeColor(event.type)} ${onEventClick ? 'cursor-pointer hover:ring-2 hover:ring-offset-1 ring-gray-400' : ''}`}
