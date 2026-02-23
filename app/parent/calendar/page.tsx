@@ -338,8 +338,8 @@ export default function ParentCalendarPage() {
                 )}
               </div>
             ) : (
-              <div className="bg-white rounded-lg shadow-md p-4">
-                <p className="text-gray-500 text-sm">Sélectionnez une date pour voir les événements</p>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+                <p className="text-gray-500 dark:text-gray-400 text-sm">Sélectionnez une date pour voir les événements. Cliquez sur le nom du mois pour afficher un menu.</p>
               </div>
             )}
           </div>

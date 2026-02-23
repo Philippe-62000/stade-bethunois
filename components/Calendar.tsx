@@ -93,7 +93,7 @@ export default function Calendar({ events, availabilities = [], selectedDate = n
   const emptyDays = Array(firstDayOfWeek).fill(null);
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 md:p-6">
       <div className="mb-6">
         <div className="flex justify-between items-center">
           <button
@@ -101,13 +101,13 @@ export default function Calendar({ events, availabilities = [], selectedDate = n
               setCurrentMonth(subMonths(currentMonth, 1));
               setShowMonthButtons(false);
             }}
-            className="p-2 hover:bg-gray-100 rounded-md"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-900 dark:text-gray-100 text-2xl font-bold min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             ←
           </button>
           <button
             onClick={handleMonthClick}
-            className={`text-xl font-bold px-3 py-1 rounded-md ${showMonthActions || onMonthAction ? 'hover:bg-gray-100 cursor-pointer' : ''}`}
+            className={`text-xl font-bold px-3 py-1 rounded-md text-gray-900 dark:text-gray-100 ${showMonthActions || onMonthAction ? 'hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer' : ''}`}
           >
             {format(currentMonth, 'MMMM yyyy', { locale: fr })}
           </button>
@@ -116,7 +116,7 @@ export default function Calendar({ events, availabilities = [], selectedDate = n
               setCurrentMonth(addMonths(currentMonth, 1));
               setShowMonthButtons(false);
             }}
-            className="p-2 hover:bg-gray-100 rounded-md"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-900 dark:text-gray-100 text-2xl font-bold min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             →
           </button>
@@ -147,7 +147,7 @@ export default function Calendar({ events, availabilities = [], selectedDate = n
 
       <div className="grid grid-cols-7 gap-1 mb-2">
         {weekDays.map(day => (
-          <div key={day} className="text-center text-sm font-semibold text-gray-600 py-2">
+          <div key={day} className="text-center text-sm font-semibold text-gray-600 dark:text-gray-300 py-2">
             {day}
           </div>
         ))}
