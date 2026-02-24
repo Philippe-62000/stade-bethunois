@@ -31,9 +31,11 @@ export async function GET(request: NextRequest) {
     }
 
     const objectIds = eventIds.map((id) => new mongoose.Types.ObjectId(id));
+    // Compter les enfants UNIQUES par événement (évite doublons → 13/12 au lieu de 12/12 pour SUR STADE Béthunois)
     const results = await Availability.aggregate([
       { $match: { eventId: { $in: objectIds }, status: { $in: ['present', 'absent'] } } },
-      { $group: { _id: '$eventId', count: { $sum: 1 } } },
+      { $group: { _id: { eventId: '$eventId', childId: '$childId' } } },
+      { $group: { _id: '$_id.eventId', count: { $sum: 1 } } },
     ]);
 
     const counts: Record<string, number> = {};
