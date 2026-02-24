@@ -33,6 +33,7 @@ export default function EducatorEventsPage() {
   const [dayEventsList, setDayEventsList] = useState<CalendarEvent[]>([]);
   const [selectedEventForDelete, setSelectedEventForDelete] = useState<CalendarEvent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [eventResponseCounts, setEventResponseCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchData();
@@ -49,7 +50,16 @@ export default function EducatorEventsPage() {
 
       if (eventsRes.ok) {
         const eventsData = await eventsRes.json();
-        setEvents(eventsData.events || []);
+        const eventsList = eventsData.events || [];
+        setEvents(eventsList);
+        if (eventsList.length > 0) {
+          const ids = eventsList.map((e: CalendarEvent) => e._id).join(',');
+          const countsRes = await fetch(`/api/availabilities/counts?eventIds=${ids}`, { credentials: 'include' });
+          if (countsRes.ok) {
+            const { counts } = await countsRes.json();
+            setEventResponseCounts(counts || {});
+          }
+        }
       }
 
       if (teamsRes.ok) {
@@ -154,7 +164,7 @@ export default function EducatorEventsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Calendar events={events} selectedDate={selectedDate} onDateClick={handleDateClick} onEventClick={handleEventClick} />
+        <Calendar events={events} eventResponseCounts={eventResponseCounts} selectedDate={selectedDate} onDateClick={handleDateClick} onEventClick={handleEventClick} />
       </div>
 
       {showCreateForm && (

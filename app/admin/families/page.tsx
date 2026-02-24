@@ -272,7 +272,7 @@ function EditFamilyModal({
     children: family.children.map(c => ({
       id: c.id,
       name: c.name,
-      teamId: teams.find(t => t.name === c.teamId.name)?._id || '',
+      teamId: teams.find(t => t.name === c.teamId.name && t.category === (c.teamId.category || ''))?._id || '',
     })),
   });
   const [loading, setLoading] = useState(false);

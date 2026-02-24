@@ -68,6 +68,29 @@ function EducatorAvailabilitiesContent() {
     }
   }, [selectedEventId]);
 
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const dateParam = searchParams.get('date') || todayStr;
+  const displayedEvents = events.filter(e => {
+    const eventDate = new Date(e.date);
+    eventDate.setHours(0, 0, 0, 0);
+    const target = new Date(dateParam);
+    target.setHours(0, 0, 0, 0);
+    return eventDate.getTime() >= target.getTime();
+  });
+
+  useEffect(() => {
+    const filtered = events.filter(e => {
+      const eventDate = new Date(e.date);
+      eventDate.setHours(0, 0, 0, 0);
+      const target = new Date(dateParam);
+      target.setHours(0, 0, 0, 0);
+      return eventDate.getTime() >= target.getTime();
+    });
+    if (filtered.length > 0 && (!selectedEventId || !filtered.some(e => e._id === selectedEventId))) {
+      setSelectedEventId(filtered[0]._id);
+    }
+  }, [dateParam, events]);
+
   const fetchEvents = async () => {
     try {
       const dateParam = searchParams.get('date');
@@ -80,18 +103,16 @@ function EducatorAvailabilitiesContent() {
         const allEvents = data.events || [];
         setEvents(allEvents);
         if (allEvents.length > 0) {
-          if (dateParam) {
-            const targetDate = new Date(dateParam);
-            targetDate.setHours(0, 0, 0, 0);
-            const dayEvents = allEvents.filter((e: Event) => {
-              const eventDate = new Date(e.date);
-              eventDate.setHours(0, 0, 0, 0);
-              return eventDate.getTime() === targetDate.getTime();
-            });
-            setSelectedEventId(dayEvents.length > 0 ? dayEvents[0]._id : null);
-          } else {
-            setSelectedEventId(allEvents[0]._id);
-          }
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const minDate = dateParam ? new Date(dateParam) : today;
+          minDate.setHours(0, 0, 0, 0);
+          const futureEvents = allEvents.filter((e: Event) => {
+            const eventDate = new Date(e.date);
+            eventDate.setHours(0, 0, 0, 0);
+            return eventDate.getTime() >= minDate.getTime();
+          });
+          setSelectedEventId(futureEvents.length > 0 ? futureEvents[0]._id : null);
         }
       }
       if (eventTypesRes.ok) {
@@ -130,16 +151,6 @@ function EducatorAvailabilitiesContent() {
     }
   };
 
-  const dateParam = searchParams.get('date');
-  const displayedEvents = dateParam
-    ? events.filter(e => {
-        const eventDate = new Date(e.date);
-        eventDate.setHours(0, 0, 0, 0);
-        const target = new Date(dateParam);
-        target.setHours(0, 0, 0, 0);
-        return eventDate.getTime() === target.getTime();
-      })
-    : events;
   const selectedEvent = events.find(e => e._id === selectedEventId);
 
   const handlePrint = useReactToPrint({
@@ -223,11 +234,17 @@ function EducatorAvailabilitiesContent() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-md p-4">
-              <h2 className="text-lg font-semibold mb-4">
-                {dateParam
-                  ? `Événements du ${format(new Date(dateParam), 'dd MMMM yyyy', { locale: fr })}`
-                  : 'Événements'}
-              </h2>
+              <h2 className="text-lg font-semibold mb-2">Événements</h2>
+              <div className="mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">À partir du</label>
+                <input
+                  type="date"
+                  min={todayStr}
+                  value={dateParam}
+                  onChange={(e) => router.push(`/educator/availabilities?date=${e.target.value}`)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
+              </div>
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {displayedEvents.map(event => (
                   <button
@@ -369,8 +386,8 @@ function EducatorAvailabilitiesContent() {
             ) : (
               <div className="bg-white rounded-lg shadow-md p-6">
                 <p className="text-gray-500 text-center">
-                  {dateParam && displayedEvents.length === 0
-                    ? `Aucun événement le ${format(new Date(dateParam), 'dd/MM/yyyy', { locale: fr })}`
+                  {displayedEvents.length === 0
+                    ? `Aucun événement à partir du ${format(new Date(dateParam), 'dd/MM/yyyy', { locale: fr })}`
                     : 'Sélectionnez un événement'}
                 </p>
               </div>

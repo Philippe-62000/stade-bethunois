@@ -26,6 +26,7 @@ interface AvailabilityStatus {
 interface CalendarProps {
   events: CalendarEvent[];
   availabilities?: AvailabilityStatus[];
+  eventResponseCounts?: Record<string, number>;
   selectedDate?: Date | null;
   onDateClick?: (date: Date) => void;
   onEventClick?: (event: CalendarEvent) => void;
@@ -33,7 +34,7 @@ interface CalendarProps {
   showMonthActions?: boolean;
 }
 
-export default function Calendar({ events, availabilities = [], selectedDate = null, onDateClick, onEventClick, onMonthAction, showMonthActions = false }: CalendarProps) {
+export default function Calendar({ events, availabilities = [], eventResponseCounts = {}, selectedDate = null, onDateClick, onEventClick, onMonthAction, showMonthActions = false }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showMonthButtons, setShowMonthButtons] = useState(false);
 
@@ -214,6 +215,21 @@ export default function Calendar({ events, availabilities = [], selectedDate = n
                   <span className="text-[10px] md:text-xs text-gray-500">+{dayEvents.length - 5}</span>
                 )}
               </div>
+              {Object.keys(eventResponseCounts).length > 0 && dayEvents.length > 0 && (
+                <div className="text-[10px] md:text-xs text-gray-600 mt-0.5">
+                  {dayEvents
+                    .slice(0, 3)
+                    .sort((a, b) => {
+                      const na = a.teamId?.name || '';
+                      const nc = a.teamId?.category || '';
+                      const nb = b.teamId?.name || '';
+                      const nd = b.teamId?.category || '';
+                      return `${na}-${nc}`.localeCompare(`${nb}-${nd}`);
+                    })
+                    .map((ev) => eventResponseCounts[ev._id] ?? 0)
+                    .join(' / ')}
+                </div>
+              )}
             </div>
           );
         })}
