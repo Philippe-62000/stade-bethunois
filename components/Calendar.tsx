@@ -220,11 +220,14 @@ export default function Calendar({ events, availabilities = [], eventResponseCou
                   const id = typeof ev.teamId === 'object' && ev.teamId?._id ? String(ev.teamId._id) : '';
                   return id || `${ev.teamId?.name || ''}-${ev.teamId?.category || ''}`;
                 };
+                // Utiliser MAX au lieu de SUM : évite 15/11 au lieu de 14/11 quand plusieurs événements
+                // pour le même groupe le même jour (ex. doublon ou récurrence)
                 const byTeam = new Map<string, number>();
                 for (const ev of dayEvents) {
                   const key = teamKey(ev);
+                  const count = eventResponseCounts[ev._id] ?? 0;
                   const prev = byTeam.get(key) ?? 0;
-                  byTeam.set(key, prev + (eventResponseCounts[ev._id] ?? 0));
+                  byTeam.set(key, Math.max(prev, count));
                 }
                 const sortedTeams = Array.from(byTeam.entries())
                   .sort(([ka], [kb]) => ka.localeCompare(kb))
