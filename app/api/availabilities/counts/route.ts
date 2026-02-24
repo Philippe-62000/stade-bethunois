@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import connectDB from '@/lib/mongodb';
 import Availability from '@/models/Availability';
+import Event from '@/models/Event';
 import { getAuthUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
@@ -30,20 +31,54 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ counts: {} });
     }
 
-    const objectIds = eventIds.map((id) => new mongoose.Types.ObjectId(id));
-    // Compter les enfants UNIQUES par événement (évite doublons → 13/12 au lieu de 12/12 pour SUR STADE Béthunois)
-    const results = await Availability.aggregate([
-      { $match: { eventId: { $in: objectIds }, status: { $in: ['present', 'absent'] } } },
-      { $group: { _id: { eventId: '$eventId', childId: '$childId' } } },
-      { $group: { _id: '$_id.eventId', count: { $sum: 1 } } },
-    ]);
-
+    // Même logique que la page availabilities : total présents+absents en filtrant
+    // par équipe (enfant dans l'équipe de l'événement) → totaux corrects
     const counts: Record<string, number> = {};
-    for (const r of results) {
-      counts[r._id.toString()] = r.count;
-    }
     for (const eid of eventIds) {
-      if (!(eid in counts)) counts[eid] = 0;
+      counts[eid] = 0;
+    }
+
+    const objectIds = eventIds.map((id) => new mongoose.Types.ObjectId(id));
+    const events = await Event.find({ _id: { $in: objectIds } }).select('teamId').lean();
+    const eventTeamMap = new Map<string, string | null>();
+    for (const eid of eventIds) {
+      eventTeamMap.set(eid, null);
+    }
+    for (const ev of events) {
+      const tid = ev.teamId;
+      const val = tid ? String(typeof tid === 'object' ? (tid as any)._id : tid) : null;
+      eventTeamMap.set(String(ev._id), val);
+    }
+
+    const availabilities = await Availability.find({
+      eventId: { $in: objectIds },
+      status: { $in: ['present', 'absent'] },
+    })
+      .populate({ path: 'childId', select: 'teamId', populate: { path: 'teamId' } })
+      .lean();
+
+    const seenPerEvent = new Map<string, Set<string>>();
+    for (const eid of eventIds) {
+      seenPerEvent.set(eid, new Set());
+    }
+
+    for (const av of availabilities) {
+      const eventIdStr = String((av.eventId as any)?._id ?? (av.eventId as any) ?? av.eventId);
+      const child = av.childId as any;
+      if (!child) continue;
+      const childIdStr = String(child._id ?? child);
+      const eventTeamId = eventTeamMap.get(eventIdStr);
+      const childTeamIdVal = child.teamId
+        ? String(typeof child.teamId === 'object' ? (child.teamId as any)._id : child.teamId)
+        : null;
+      if (eventTeamId && childTeamIdVal && eventTeamId !== childTeamIdVal) {
+        continue; // Enfant pas dans l'équipe de l'événement (comme page availabilities)
+      }
+      const seen = seenPerEvent.get(eventIdStr);
+      if (seen && !seen.has(childIdStr)) {
+        seen.add(childIdStr);
+        counts[eventIdStr] = (counts[eventIdStr] ?? 0) + 1;
+      }
     }
 
     return NextResponse.json({ counts });
