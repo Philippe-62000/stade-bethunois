@@ -215,21 +215,27 @@ export default function Calendar({ events, availabilities = [], eventResponseCou
                   <span className="text-[10px] md:text-xs text-gray-500">+{dayEvents.length - 5}</span>
                 )}
               </div>
-              {Object.keys(eventResponseCounts).length > 0 && dayEvents.length > 0 && (
-                <div className="text-[10px] md:text-xs text-gray-600 mt-0.5">
-                  {dayEvents
-                    .slice(0, 3)
-                    .sort((a, b) => {
-                      const na = a.teamId?.name || '';
-                      const nc = a.teamId?.category || '';
-                      const nb = b.teamId?.name || '';
-                      const nd = b.teamId?.category || '';
-                      return `${na}-${nc}`.localeCompare(`${nb}-${nd}`);
-                    })
-                    .map((ev) => eventResponseCounts[ev._id] ?? 0)
-                    .join(' / ')}
-                </div>
-              )}
+              {Object.keys(eventResponseCounts).length > 0 && dayEvents.length > 0 && (() => {
+                const teamKey = (ev: CalendarEvent) => {
+                  const id = typeof ev.teamId === 'object' && ev.teamId?._id ? String(ev.teamId._id) : '';
+                  return id || `${ev.teamId?.name || ''}-${ev.teamId?.category || ''}`;
+                };
+                const byTeam = new Map<string, number>();
+                for (const ev of dayEvents) {
+                  const key = teamKey(ev);
+                  const prev = byTeam.get(key) ?? 0;
+                  byTeam.set(key, prev + (eventResponseCounts[ev._id] ?? 0));
+                }
+                const sortedTeams = Array.from(byTeam.entries())
+                  .sort(([ka], [kb]) => ka.localeCompare(kb))
+                  .slice(0, 3)
+                  .map(([, count]) => count);
+                return (
+                  <div className="text-[10px] md:text-xs text-gray-600 mt-0.5">
+                    {sortedTeams.join(' / ')}
+                  </div>
+                );
+              })()}
             </div>
           );
         })}
