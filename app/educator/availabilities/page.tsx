@@ -161,6 +161,10 @@ function EducatorAvailabilitiesContent() {
   const handlePrintAllTeams = useReactToPrint({
     contentRef: printAllTeamsRef,
     documentTitle: selectedEvent ? `Présences toutes équipes - ${format(new Date(selectedEvent.date), 'dd-MM-yyyy', { locale: fr })}` : 'Présences',
+    onAfterPrint: () => {
+      setAllTeamsData(null);
+      setLoadingAllTeams(false);
+    },
   });
 
   const onPrintAllTeamsClick = async () => {
@@ -187,8 +191,7 @@ function EducatorAvailabilitiesContent() {
     if (allTeamsData && allTeamsData.length > 0) {
       const timer = setTimeout(() => {
         handlePrintAllTeams();
-        setAllTeamsData(null);
-        setLoadingAllTeams(false);
+        // Nettoyage dans onAfterPrint pour ne pas supprimer le contenu avant la capture par le print
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -325,56 +328,50 @@ function EducatorAvailabilitiesContent() {
                   </div>
                 </div>
 
-                <div ref={printRef} className="print:p-8 print:max-w-4xl print:mx-auto">
-                  <style jsx>{`
+                <div ref={printRef} className="print:p-6 print:max-w-4xl print:mx-auto">
+                  <style>{`
                     @media print {
-                      @page {
-                        margin: 2cm;
-                      }
-                      body {
-                        margin: 0;
-                        padding: 0;
-                      }
+                      @page { margin: 12mm; size: A4; }
+                      body { margin: 0; padding: 0; }
+                      .print-single-team-block { page-break-inside: avoid; }
                     }
                   `}</style>
                   <div className="mb-4 print:hidden">
                     <h3 className="text-lg font-semibold">Liste des joueurs</h3>
                   </div>
-                  <div className="print:block hidden print:mb-6 print:text-center">
-                    <h3 className="text-xl font-bold mb-4">Liste des joueurs</h3>
-                    <div className="text-sm text-gray-600 mb-4 space-y-1">
+                  <div className="print:block hidden print:mb-4 print:text-center">
+                    <h3 className="text-base font-bold mb-2">Liste des joueurs</h3>
+                    <div className="text-xs text-gray-600 mb-2 space-y-0.5">
                       <p><strong>Date:</strong> {format(new Date(selectedEvent.date), 'EEEE d MMMM yyyy', { locale: fr })}</p>
-                      <p><strong>Heure:</strong> {selectedEvent.time}</p>
-                      <p><strong>Lieu:</strong> {selectedEvent.location}</p>
+                      <p><strong>Heure:</strong> {selectedEvent.time} — <strong>Lieu:</strong> {selectedEvent.location}</p>
                       <p><strong>Équipe:</strong> {selectedEvent.teamId.name} ({selectedEvent.teamId.category})</p>
                     </div>
-                    <div className="text-lg font-semibold mb-4 pt-4 border-t">
+                    <div className="text-sm font-semibold mb-3 pt-2 border-t">
                       Total des enfants présents : {presentCount}
                     </div>
                   </div>
-                  <div className="space-y-2 print:space-y-1">
+                  <div className="space-y-2 print:space-y-0 print-single-team-block">
                     {availabilities.length > 0 ? (
-                      availabilities.map(availability => {
-                        const statusInfo = getStatusLabel(availability.status);
-                        return (
-                          <div
-                            key={availability._id}
-                            className="flex items-center justify-between p-3 border border-gray-200 rounded-md print:p-2 print:border-b print:border-gray-300 print:rounded-none"
-                          >
-                            <div className="print:flex-1">
-                              <div className="font-medium print:text-base">{availability.childId.name}</div>
-                              {availability.comment && (
-                                <div className="text-sm text-gray-500 mt-1 print:text-xs">
-                                  {availability.comment}
-                                </div>
-                              )}
-                            </div>
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusInfo.color} print:px-2 print:py-0.5`}>
-                              {statusInfo.label}
-                            </span>
-                          </div>
-                        );
-                      })
+                      <table className="w-full print:text-xs">
+                        <tbody>
+                          {availabilities.map(availability => {
+                            const statusInfo = getStatusLabel(availability.status);
+                            return (
+                              <tr key={availability._id} className="border-b border-gray-200 print:border-gray-300">
+                                <td className="py-2 print:py-1 font-medium">
+                                  {availability.childId.name}
+                                  {availability.comment && (
+                                    <span className="text-sm text-gray-500 print:text-xs block">{availability.comment}</span>
+                                  )}
+                                </td>
+                                <td className={`py-2 print:py-1 text-right text-xs font-semibold ${statusInfo.color}`}>
+                                  {statusInfo.label}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     ) : (
                       <p className="text-gray-500 text-center py-8 print:py-4">
                         Aucune disponibilité déclarée pour cet événement
@@ -396,41 +393,51 @@ function EducatorAvailabilitiesContent() {
         </div>
       </div>
 
-      {/* Zone cachée pour l'impression de toutes les équipes */}
+      {/* Zone pour l'impression de toutes les équipes - hors écran pour que react-to-print capture tout */}
       {allTeamsData && allTeamsData.length > 0 && selectedEvent && (
-        <div ref={printAllTeamsRef} className="hidden print:block print:p-8 print:max-w-4xl print:mx-auto">
+        <div
+          ref={printAllTeamsRef}
+          className="print-all-teams-root fixed left-[-9999px] top-0 w-[210mm] bg-white"
+          style={{ visibility: 'hidden' }}
+        >
           <style>{`
             @media print {
-              @page { margin: 2cm; }
+              .print-all-teams-root { visibility: visible !important; position: static !important; left: auto !important; width: 100% !important; }
+              .print-all-teams-wrapper { visibility: visible !important; }
+              .print-team-block { page-break-after: always; page-break-inside: avoid; }
+              .print-team-block:last-child { page-break-after: auto; }
+              @page { margin: 12mm; size: A4; }
               body { margin: 0; padding: 0; }
             }
           `}</style>
-          <div className="print:block">
-            <h2 className="text-xl font-bold mb-4 text-center">
+          <div className="print-all-teams-wrapper p-6">
+            <h2 className="text-lg font-bold mb-3 text-center">
               Présences - {format(new Date(selectedEvent.date), 'EEEE d MMMM yyyy', { locale: fr })}
             </h2>
-            {allTeamsData.map(({ event, availabilities: avs }) => (
-              <div key={event._id} className="mb-8 break-inside-avoid">
-                <h3 className="text-lg font-semibold mb-2 border-b pb-2">
+            {allTeamsData.map(({ event, availabilities: avs }, idx) => (
+              <div key={event._id} className={`print-team-block py-4 ${idx > 0 ? 'mt-4' : ''}`}>
+                <h3 className="text-sm font-semibold mb-1 border-b border-gray-300 pb-1">
                   {getEventTypeLabel(event.type, eventTypes)} - {event.time} - {event.teamId?.name} ({event.teamId?.category})
                 </h3>
-                <p className="text-sm text-gray-600 mb-2">{event.location}</p>
-                <div className="space-y-1">
-                  {avs.length > 0 ? (
-                    avs.map((a) => {
-                      const statusInfo = getStatusLabel(a.status);
-                      return (
-                        <div key={a._id} className="flex justify-between py-1 border-b border-gray-200">
-                          <span className="font-medium">{a.childId?.name || '-'}</span>
-                          <span className={statusInfo.color}>{statusInfo.label}</span>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <p className="text-gray-500 text-sm">Aucune présence déclarée</p>
-                  )}
-                </div>
-                <p className="text-sm font-medium mt-2">
+                <p className="text-xs text-gray-600 mb-2">{event.location}</p>
+                <table className="w-full text-xs">
+                  <tbody>
+                    {avs.length > 0 ? (
+                      avs.map((a) => {
+                        const statusInfo = getStatusLabel(a.status);
+                        return (
+                          <tr key={a._id} className="border-b border-gray-100">
+                            <td className="py-0.5 font-medium">{a.childId?.name || '-'}</td>
+                            <td className="py-0.5 text-right">{statusInfo.label}</td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr><td colSpan={2} className="py-1 text-gray-500 text-xs">Aucune présence déclarée</td></tr>
+                    )}
+                  </tbody>
+                </table>
+                <p className="text-xs font-medium mt-1">
                   Présents : {avs.filter(a => a.status === 'present').length} | Absents : {avs.filter(a => a.status === 'absent').length} | En attente : {avs.filter(a => a.status === 'pending').length}
                 </p>
               </div>
