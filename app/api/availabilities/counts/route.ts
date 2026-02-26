@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 import connectDB from '@/lib/mongodb';
 import Availability from '@/models/Availability';
 import Event from '@/models/Event';
+import Child from '@/models/Child';
+import Team from '@/models/Team';
 import { getAuthUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
