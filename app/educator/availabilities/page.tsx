@@ -189,10 +189,12 @@ function EducatorAvailabilitiesContent() {
 
   useEffect(() => {
     if (allTeamsData && allTeamsData.length > 0) {
+      // Délai plus long sur mobile pour que le DOM soit bien rendu avant la capture print
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      const delay = isMobile ? 600 : 300;
       const timer = setTimeout(() => {
         handlePrintAllTeams();
-        // Nettoyage dans onAfterPrint pour ne pas supprimer le contenu avant la capture par le print
-      }, 300);
+      }, delay);
       return () => clearTimeout(timer);
     }
   }, [allTeamsData]);
@@ -364,7 +366,7 @@ function EducatorAvailabilitiesContent() {
                                     <span className="text-sm text-gray-500 print:text-xs block">{availability.comment}</span>
                                   )}
                                 </td>
-                                <td className={`py-2 print:py-1 text-right text-xs font-semibold ${statusInfo.color}`}>
+                                <td className={`py-2 print:py-1 text-right text-xs font-semibold px-3 whitespace-nowrap min-w-[5rem] ${statusInfo.color}`}>
                                   {statusInfo.label}
                                 </td>
                               </tr>
@@ -397,12 +399,12 @@ function EducatorAvailabilitiesContent() {
       {allTeamsData && allTeamsData.length > 0 && selectedEvent && (
         <div
           ref={printAllTeamsRef}
-          className="print-all-teams-root fixed left-[-9999px] top-0 w-[210mm] bg-white"
-          style={{ visibility: 'hidden' }}
+          className="print-all-teams-root fixed inset-0 z-[-1] opacity-0 pointer-events-none overflow-auto bg-white"
+          style={{ width: '210mm', minWidth: '210mm' }}
         >
           <style>{`
             @media print {
-              .print-all-teams-root { visibility: visible !important; position: static !important; left: auto !important; width: 100% !important; }
+              .print-all-teams-root { opacity: 1 !important; position: static !important; inset: auto !important; width: 100% !important; z-index: auto !important; }
               .print-all-teams-wrapper { visibility: visible !important; }
               .print-team-block { page-break-after: always; page-break-inside: avoid; }
               .print-team-block:last-child { page-break-after: auto; }
@@ -428,7 +430,7 @@ function EducatorAvailabilitiesContent() {
                         return (
                           <tr key={a._id} className="border-b border-gray-100">
                             <td className="py-0.5 font-medium">{a.childId?.name || '-'}</td>
-                            <td className="py-0.5 text-right">{statusInfo.label}</td>
+                            <td className={`py-0.5 text-right px-3 whitespace-nowrap min-w-[5rem] ${statusInfo.color}`}>{statusInfo.label}</td>
                           </tr>
                         );
                       })
