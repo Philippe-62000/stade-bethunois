@@ -84,12 +84,12 @@ export default function ParentCalendarPage() {
 
       if (eventsRes.ok) {
         const eventsData = await eventsRes.json();
-        setEvents(eventsData.events || []);
+        setEvents((eventsData.events || []).filter(Boolean));
       }
 
       if (childrenRes.ok) {
         const childrenData = await childrenRes.json();
-        const childrenList = childrenData.children || [];
+        const childrenList = (childrenData.children || []).filter(Boolean);
         setChildren(childrenList);
         // Sélectionner le premier enfant par défaut
         if (childrenList.length > 0 && !selectedChildId) {
@@ -99,7 +99,7 @@ export default function ParentCalendarPage() {
 
       if (availabilitiesRes.ok) {
         const availabilitiesData = await availabilitiesRes.json();
-        setAvailabilities(availabilitiesData.availabilities || []);
+        setAvailabilities((availabilitiesData.availabilities || []).filter(Boolean));
       }
 
       if (eventTypesRes.ok) {
@@ -197,16 +197,18 @@ export default function ParentCalendarPage() {
 
   const filteredAvailabilities = selectedChildId
     ? availabilities.filter(av => {
-        const childId = typeof av.childId === 'object' ? av.childId._id : av.childId;
+        const childId = av.childId && typeof av.childId === 'object' ? av.childId._id : av.childId;
         return childId === selectedChildId;
       })
     : availabilities;
 
-  const availabilitiesForCalendar = filteredAvailabilities.map(av => ({
-    eventId: typeof av.eventId === 'object' ? av.eventId._id : av.eventId,
-    childId: typeof av.childId === 'object' ? av.childId._id : av.childId,
-    status: av.status,
-  }));
+  const availabilitiesForCalendar = filteredAvailabilities
+    .map(av => ({
+      eventId: av.eventId && typeof av.eventId === 'object' ? av.eventId._id : av.eventId,
+      childId: av.childId && typeof av.childId === 'object' ? av.childId._id : av.childId,
+      status: av.status,
+    }))
+    .filter(av => av.eventId && av.childId);
 
   const selectedChild = children.find(c => c._id === selectedChildId);
 
@@ -258,7 +260,7 @@ export default function ParentCalendarPage() {
                   onChange={(e) => setSelectedChildId(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 >
-                  {children.map(child => (
+                  {(children || []).filter(Boolean).map(child => (
                     <option key={child._id} value={child._id}>
                       {child.name}
                     </option>
@@ -295,8 +297,8 @@ export default function ParentCalendarPage() {
                       if (!eventAppliesToChild(event, selectedChildId, selectedChild)) return null;
 
                       const availability = availabilities.find(av => {
-                        const avEventId = typeof av.eventId === 'object' ? av.eventId._id : av.eventId;
-                        const avChildId = typeof av.childId === 'object' ? av.childId._id : av.childId;
+                        const avEventId = av.eventId && typeof av.eventId === 'object' ? av.eventId._id : av.eventId;
+                        const avChildId = av.childId && typeof av.childId === 'object' ? av.childId._id : av.childId;
                         return avEventId === event._id && avChildId === selectedChildId;
                       });
 

@@ -38,11 +38,14 @@ export async function GET(request: NextRequest) {
     }
     // Admin voit tout (pas de filtre)
 
-    const children = await Child.find(query)
+    const rawChildren = await Child.find(query)
       .populate('parentId', 'name email')
       .populate('parentId2', 'name email')
       .populate('teamId', 'name category');
-    
+
+    // Exclure les enfants dont l'équipe a été supprimée (teamId null après populate)
+    const children = rawChildren.filter((c: any) => c.teamId != null);
+
     return NextResponse.json({ children });
   } catch (error: any) {
     console.error('Erreur lors de la récupération des enfants:', error);

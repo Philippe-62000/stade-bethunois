@@ -71,11 +71,23 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    const events = await Event.find(query)
+    const rawEvents = await Event.find(query)
       .populate('teamId', 'name category')
       .populate('selectedChildrenIds', 'name')
       .populate('createdBy', 'name')
       .sort({ date: 1 });
+
+    // Exclure les événements dont l'équipe a été supprimée (teamId null après populate)
+    const events = rawEvents
+      .filter((e: any) => e.teamId != null)
+      .map((e: any) => {
+        const doc = e.toObject ? e.toObject() : { ...e };
+        // Retirer les enfants supprimés de selectedChildrenIds (populate retourne null pour les refs supprimées)
+        if (Array.isArray(doc.selectedChildrenIds)) {
+          doc.selectedChildrenIds = doc.selectedChildrenIds.filter((c: any) => c != null);
+        }
+        return doc;
+      });
 
     return NextResponse.json({ events });
   } catch (error: any) {

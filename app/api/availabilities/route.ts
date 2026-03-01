@@ -50,12 +50,15 @@ export async function GET(request: NextRequest) {
       .populate({ path: 'childId', select: 'name teamId', populate: { path: 'teamId', select: 'name category' } })
       .populate('parentId', 'name email');
 
+    // Exclure les disponibilités orphelines (événement ou enfant supprimé → populate retourne null)
+    availabilities = availabilities.filter((av: any) => av.eventId != null && av.childId != null);
+
     // Pour les éducateurs/admin : filtrer pour ne garder que les enfants de l'équipe de l'événement
     if (eventId && (authUser.role === 'educator' || authUser.role === 'admin')) {
       const event = await Event.findById(eventId).populate('teamId', 'name category');
       if (event?.teamId) {
         const eventTeamId = typeof event.teamId === 'object' ? event.teamId._id : event.teamId;
-        availabilities = availabilities.filter(av => {
+        availabilities = availabilities.filter((av: any) => {
           const child = av.childId;
           if (!child || typeof child !== 'object') return false;
           const childTeamId = (child as any).teamId;
