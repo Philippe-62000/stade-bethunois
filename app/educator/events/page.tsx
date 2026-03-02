@@ -501,8 +501,8 @@ function CreateEventForm({
   onSuccess: () => void;
 }) {
   const router = useRouter();
-  const trainingKey = eventTypes.find((et) => et.key === 'training')?.key || eventTypes[0]?.key || 'training';
-  const defaultType = trainingKey;
+  const tournamentKey = eventTypes.find((et) => et.key === 'tournament')?.key || eventTypes[0]?.key || 'tournament';
+  const defaultType = tournamentKey;
   const [formData, setFormData] = useState({
     type: defaultType,
     date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
@@ -824,8 +824,8 @@ function CreateRecurrenceForm({
   onSuccess: () => void;
 }) {
   const router = useRouter();
-  const trainingKey = eventTypes.find((et) => et.key === 'training')?.key || eventTypes[0]?.key || 'training';
-  const defaultType = trainingKey;
+  const tournamentKey = eventTypes.find((et) => et.key === 'tournament')?.key || eventTypes[0]?.key || 'tournament';
+  const defaultType = tournamentKey;
   const [formData, setFormData] = useState({
     type: defaultType,
     dayOfWeek: '1',

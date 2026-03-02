@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import emailjs from '@emailjs/browser';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -71,20 +72,87 @@ export default function LoginPage() {
         body: JSON.stringify({ email: forgotEmail.trim() }),
       });
       const data = await res.json();
-      if (res.ok) {
+
+      if (!res.ok) {
+        setForgotMessage({ type: 'error', text: data.error || "Une erreur s'est produite." });
+        return;
+      }
+
+      if (data.sendEmail) {
+        const configRes = await fetch('/api/emailjs-config-public');
+        const config = await configRes.json();
+
+        if (config.serviceId && config.templateIdLoginCode && config.publicKey && data.parentEmail) {
+          const htmlMessage = `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code de connexion</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+    <h1 style="color: #2563eb; margin-top: 0;">Code de connexion</h1>
+    <p>Bonjour ${data.parentName || 'Parent'},</p>
+    <p>Voici votre code de connexion pour accéder au planning de votre enfant :</p>
+    <div style="background-color: #ffffff; border: 2px solid #2563eb; border-radius: 6px; padding: 20px; text-align: center; margin: 20px 0;">
+      <p style="margin: 0; font-size: 14px; color: #666;">Votre code de connexion :</p>
+      <p style="margin: 10px 0; font-size: 32px; font-weight: bold; color: #2563eb; letter-spacing: 4px;">${data.code || ''}</p>
+    </div>
+    <p>Pour vous connecter, rendez-vous sur :</p>
+    <p style="margin: 20px 0;">
+      <a href="${data.siteUrl || ''}" style="display: inline-block; background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Accéder au planning</a>
+    </p>
+    <p style="font-size: 14px; color: #666; margin-top: 30px;">
+      Ce code est valable sans limitation de temps. Vous pouvez le modifier à tout moment depuis votre espace parent.
+    </p>
+    <p style="font-size: 14px; color: #666;">
+      Si vous n'avez pas demandé ce code, vous pouvez ignorer cet email.
+    </p>
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+    <p style="font-size: 12px; color: #999; text-align: center; margin-top: 20px;">
+      Cette adresse n'est utilisée que pour envoyer des emails dans le cadre de ce site, la boite mail n'est pas consultée, si vous souhaitez écrire au club merci d'utiliser l'adresse habituelle.
+    </p>
+  </div>
+</body>
+</html>
+          `.trim();
+
+          const templateParams = {
+            html_message: htmlMessage,
+            to_email: data.parentEmail.trim(),
+            user_email: data.parentEmail.trim(),
+            to_name: data.parentName || '',
+            reply_to: data.parentEmail.trim(),
+            subject: 'Code de connexion - Stade Béthunois',
+            parent_name: data.parentName || '',
+            site_url: data.siteUrl || '',
+            login_code: data.code || '',
+          };
+
+          await emailjs.send(
+            config.serviceId,
+            config.templateIdLoginCode,
+            templateParams,
+            config.publicKey
+          );
+
+          setForgotMessage({ type: 'success', text: data.message || 'Email envoyé.' });
+          setForgotEmail('');
+        } else {
+          setForgotMessage({
+            type: 'error',
+            text: "Configuration email manquante. Veuillez contacter l'administrateur du club.",
+          });
+        }
+      } else {
         setForgotMessage({ type: 'success', text: data.message || 'Email envoyé.' });
         setForgotEmail('');
-      } else {
-        setForgotMessage({
-          type: 'error',
-          text: data.error || "Une erreur s'est produite.",
-        });
       }
-    } catch (err) {
-      setForgotMessage({
-        type: 'error',
-        text: "Erreur de connexion. Veuillez réessayer.",
-      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erreur de connexion. Veuillez réessayer.";
+      setForgotMessage({ type: 'error', text: msg });
     } finally {
       setForgotLoading(false);
     }

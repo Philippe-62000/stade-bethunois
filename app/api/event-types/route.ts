@@ -4,10 +4,10 @@ import EventType from '@/models/EventType';
 import { getAuthUser } from '@/lib/auth';
 
 const DEFAULT_EVENT_TYPES = [
-  { key: 'training', label: 'Entraînement', order: 0 },
-  { key: 'tournament', label: 'Tournois (Salle ou extérieur)', order: 1 },
-  { key: 'match', label: 'Matchs', order: 2 },
-  { key: 'plateaux', label: 'Plateaux', order: 3 },
+  { key: 'tournament', label: 'Tournois (Salle ou extérieur)', order: 0 },
+  { key: 'match', label: 'Matchs', order: 1 },
+  { key: 'plateaux', label: 'Plateaux', order: 2 },
+  { key: 'training', label: 'Entraînement', order: 3 },
 ];
 
 export async function GET(request: NextRequest) {

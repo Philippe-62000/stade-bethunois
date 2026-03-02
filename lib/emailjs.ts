@@ -1,8 +1,8 @@
-const SERVICE_ID = process.env.EMAILJS_SERVICE_ID!;
-const TEMPLATE_ID_CREATION = process.env.EMAILJS_TEMPLATE_ID_CREATION!;
-const TEMPLATE_ID_REMINDER = process.env.EMAILJS_TEMPLATE_ID_REMINDER!;
-const TEMPLATE_ID_LOGIN_CODE = process.env.EMAILJS_TEMPLATE_ID_LOGIN_CODE || TEMPLATE_ID_CREATION; // Fallback si non défini
-const PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY!;
+const SERVICE_ID = process.env.EMAILJS_SERVICE_ID || '';
+const TEMPLATE_ID_CREATION = process.env.EMAILJS_TEMPLATE_ID_CREATION || '';
+const TEMPLATE_ID_REMINDER = process.env.EMAILJS_TEMPLATE_ID_REMINDER || '';
+const TEMPLATE_ID_LOGIN_CODE = process.env.EMAILJS_TEMPLATE_ID_LOGIN_CODE || process.env.EMAILJS_TEMPLATE_ID_CREATION || '';
+const PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY || '';
 
 export interface EmailParams {
   parent_name: string;
@@ -70,7 +70,6 @@ export async function sendReminderEmail(params: EmailParams): Promise<void> {
 }
 
 async function sendLoginCodeEmail(templateId: string, params: LoginCodeEmailParams): Promise<void> {
-  const url = `https://api.emailjs.com/api/v1.0/email/send`;
   const templateParams: Record<string, string> = {
     parent_name: params.parent_name,
     site_url: params.site_url,
@@ -80,12 +79,20 @@ async function sendLoginCodeEmail(templateId: string, params: LoginCodeEmailPara
     templateParams.to_email = params.to_email;
     templateParams.user_email = params.to_email;
   }
-  
+
+  if (typeof window === 'undefined') {
+    const emailjs = (await import('@emailjs/nodejs')).default;
+    await emailjs.send(SERVICE_ID, templateId, templateParams, {
+      publicKey: PUBLIC_KEY,
+      privateKey: process.env.EMAILJS_PRIVATE_KEY || undefined,
+    });
+    return;
+  }
+
+  const url = `https://api.emailjs.com/api/v1.0/email/send`;
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       service_id: SERVICE_ID,
       template_id: templateId,
