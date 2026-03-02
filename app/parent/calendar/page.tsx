@@ -19,6 +19,7 @@ interface Event {
     name: string;
     category: string;
   };
+  modifiedFields?: { time?: boolean; location?: boolean; type?: boolean };
 }
 
 interface Child {
@@ -68,9 +69,17 @@ export default function ParentCalendarPage() {
   const [selectedEvents, setSelectedEvents] = useState<Event[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [acknowledgedEventIds, setAcknowledgedEventIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/event-modification-acks', { credentials: 'include' })
+      .then((res) => (res.ok ? res.json() : { eventIds: [] }))
+      .then((data) => setAcknowledgedEventIds(new Set(data.eventIds || [])))
+      .catch(() => {});
   }, []);
 
   const fetchData = async () => {
@@ -121,6 +130,22 @@ export default function ParentCalendarPage() {
     if (dayEvents.length > 0) {
       setSelectedDate(date);
       setSelectedEvents(dayEvents);
+      const toAck = dayEvents.filter((ev) => {
+        const mod = (ev as Event & { modifiedFields?: { time?: boolean; location?: boolean; type?: boolean } }).modifiedFields;
+        return mod && (mod.time || mod.location || mod.type);
+      });
+      toAck.forEach((ev) => {
+        fetch(`/api/events/${ev._id}/ack-modification`, {
+          method: 'POST',
+          credentials: 'include',
+        })
+          .then((res) => {
+            if (res.ok) {
+              setAcknowledgedEventIds((prev) => new Set([...prev, ev._id]));
+            }
+          })
+          .catch(() => {});
+      });
     }
   };
 
@@ -279,6 +304,7 @@ export default function ParentCalendarPage() {
               onDateClick={handleDateClick}
               onMonthAction={handleMonthAction}
               showMonthActions={true}
+              acknowledgedEventIds={acknowledgedEventIds}
             />
           </div>
 

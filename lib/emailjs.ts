@@ -18,6 +18,7 @@ export interface LoginCodeEmailParams {
   parent_name: string;
   site_url: string;
   login_code: string;
+  to_email?: string;
 }
 
 async function sendEmail(templateId: string, params: EmailParams): Promise<void> {
@@ -70,6 +71,15 @@ export async function sendReminderEmail(params: EmailParams): Promise<void> {
 
 async function sendLoginCodeEmail(templateId: string, params: LoginCodeEmailParams): Promise<void> {
   const url = `https://api.emailjs.com/api/v1.0/email/send`;
+  const templateParams: Record<string, string> = {
+    parent_name: params.parent_name,
+    site_url: params.site_url,
+    login_code: params.login_code,
+  };
+  if (params.to_email) {
+    templateParams.to_email = params.to_email;
+    templateParams.user_email = params.to_email;
+  }
   
   const response = await fetch(url, {
     method: 'POST',
@@ -80,11 +90,7 @@ async function sendLoginCodeEmail(templateId: string, params: LoginCodeEmailPara
       service_id: SERVICE_ID,
       template_id: templateId,
       user_id: PUBLIC_KEY,
-      template_params: {
-        parent_name: params.parent_name,
-        site_url: params.site_url,
-        login_code: params.login_code,
-      },
+      template_params: templateParams,
     }),
   });
 

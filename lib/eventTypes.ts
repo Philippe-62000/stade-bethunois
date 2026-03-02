@@ -1,7 +1,8 @@
 const DEFAULT_LABELS: Record<string, string> = {
   training: 'Entraînement',
-  match: 'Match',
-  tournament: 'Tournoi',
+  match: 'Matchs',
+  tournament: 'Tournois (Salle ou extérieur)',
+  plateaux: 'Plateaux',
 };
 
 export function getEventTypeLabel(

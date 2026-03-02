@@ -12,6 +12,7 @@ export interface IEvent extends Document {
   isException: boolean; // événement modifié depuis récurrence
   isCustom: boolean; // événement créé manuellement
   selectedChildrenIds: mongoose.Types.ObjectId[] | null; // null = tous les enfants de l'équipe
+  modifiedFields?: { time?: boolean; location?: boolean; type?: boolean }; // champs modifiés (affichage rouge parents)
   createdAt: Date;
   createdBy: mongoose.Types.ObjectId;
   updatedAt: Date;
@@ -65,6 +66,11 @@ const EventSchema = new Schema<IEvent>(
       type: [Schema.Types.ObjectId],
       ref: 'Child',
       default: null,
+    },
+    modifiedFields: {
+      time: { type: Boolean, default: false },
+      location: { type: Boolean, default: false },
+      type: { type: Boolean, default: false },
     },
     createdBy: {
       type: Schema.Types.ObjectId,

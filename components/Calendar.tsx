@@ -14,6 +14,7 @@ export interface CalendarEvent {
   selectedChildrenIds?: Array<string | { _id: string; name?: string }> | null;
   isRecurring?: boolean;
   recurringRuleId?: string | null;
+  modifiedFields?: { time?: boolean; location?: boolean; type?: boolean };
 }
 
 
@@ -32,9 +33,10 @@ interface CalendarProps {
   onEventClick?: (event: CalendarEvent) => void;
   onMonthAction?: (month: Date, status: 'present' | 'absent') => void;
   showMonthActions?: boolean;
+  acknowledgedEventIds?: Set<string>;
 }
 
-export default function Calendar({ events, availabilities = [], eventResponseCounts = {}, selectedDate = null, onDateClick, onEventClick, onMonthAction, showMonthActions = false }: CalendarProps) {
+export default function Calendar({ events, availabilities = [], eventResponseCounts = {}, selectedDate = null, onDateClick, onEventClick, onMonthAction, showMonthActions = false, acknowledgedEventIds = new Set() }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showMonthButtons, setShowMonthButtons] = useState(false);
 
@@ -215,6 +217,27 @@ export default function Calendar({ events, availabilities = [], eventResponseCou
                   <span className="text-[10px] md:text-xs text-gray-500">+{dayEvents.length - 5}</span>
                 )}
               </div>
+              {acknowledgedEventIds.size > 0 && (() => {
+                const unackedWithMods = dayEvents.filter(
+                  (ev) =>
+                    ev.modifiedFields &&
+                    (ev.modifiedFields.time || ev.modifiedFields.location || ev.modifiedFields.type) &&
+                    !acknowledgedEventIds.has(ev._id)
+                );
+                if (unackedWithMods.length === 0) return null;
+                const labels: string[] = [];
+                unackedWithMods.forEach((ev) => {
+                  if (ev.modifiedFields?.time) labels.push('Heure');
+                  if (ev.modifiedFields?.location) labels.push('Lieu');
+                  if (ev.modifiedFields?.type) labels.push('Type');
+                });
+                const unique = [...new Set(labels)];
+                return (
+                  <div className="text-[10px] md:text-xs text-red-600 font-medium mt-0.5">
+                    {unique.join(', ')}
+                  </div>
+                );
+              })()}
               {Object.keys(eventResponseCounts).length > 0 && dayEvents.length > 0 && (() => {
                 const teamKey = (ev: CalendarEvent) => {
                   const id = typeof ev.teamId === 'object' && ev.teamId?._id ? String(ev.teamId._id) : '';

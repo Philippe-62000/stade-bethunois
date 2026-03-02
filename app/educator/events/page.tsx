@@ -32,6 +32,7 @@ export default function EducatorEventsPage() {
   const [showDayEventsModal, setShowDayEventsModal] = useState(false);
   const [dayEventsList, setDayEventsList] = useState<CalendarEvent[]>([]);
   const [selectedEventForDelete, setSelectedEventForDelete] = useState<CalendarEvent | null>(null);
+  const [selectedEventForEdit, setSelectedEventForEdit] = useState<CalendarEvent | null>(null);
   const [loading, setLoading] = useState(true);
   const [eventResponseCounts, setEventResponseCounts] = useState<Record<string, number>>({});
 
@@ -213,28 +214,38 @@ export default function EducatorEventsPage() {
                 <p className="text-gray-500 text-sm py-4">Aucun événement ce jour</p>
               ) : (
                 dayEventsList.map(ev => (
-                <li key={ev._id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowDayEventsModal(false);
-                      setSelectedEventForDelete(ev);
-                    }}
-                    className="w-full text-left px-3 py-2 rounded border border-gray-200 hover:bg-gray-50"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-medium">
-                          {getEventTypeLabel(ev.type, eventTypes)} — {ev.time}
-                        </div>
-                        <div className="text-sm text-gray-600 mt-1">
-                          <div><strong>Lieu:</strong> {ev.location}</div>
-                          {ev.teamId?.name && <div><strong>Groupe:</strong> {ev.teamId.name} {ev.teamId.category && `(${ev.teamId.category})`}</div>}
-                        </div>
-                      </div>
-                      <span className="text-gray-500 text-sm ml-4">Supprimer</span>
+                <li key={ev._id} className="flex flex-col gap-1">
+                  <div className="w-full text-left px-3 py-2 rounded border border-gray-200 bg-gray-50">
+                    <div className="font-medium">
+                      {getEventTypeLabel(ev.type, eventTypes)} — {ev.time}
                     </div>
-                  </button>
+                    <div className="text-sm text-gray-600 mt-1">
+                      <div><strong>Lieu:</strong> {ev.location}</div>
+                      {ev.teamId?.name && <div><strong>Groupe:</strong> {ev.teamId.name} {ev.teamId.category && `(${ev.teamId.category})`}</div>}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowDayEventsModal(false);
+                        setSelectedEventForEdit(ev);
+                      }}
+                      className="text-blue-600 hover:underline text-sm"
+                    >
+                      Modifier
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowDayEventsModal(false);
+                        setSelectedEventForDelete(ev);
+                      }}
+                      className="text-red-600 hover:underline text-sm"
+                    >
+                      Supprimer
+                    </button>
+                  </div>
                 </li>
               ))
               )}
@@ -266,6 +277,19 @@ export default function EducatorEventsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {selectedEventForEdit && (
+        <EditEventForm
+          event={selectedEventForEdit}
+          places={places}
+          eventTypes={eventTypes}
+          onClose={() => setSelectedEventForEdit(null)}
+          onSuccess={() => {
+            setSelectedEventForEdit(null);
+            fetchData();
+          }}
+        />
       )}
 
       {selectedEventForDelete && !showDayEventsModal && (
@@ -308,6 +332,155 @@ export default function EducatorEventsPage() {
   );
 }
 
+function EditEventForm({
+  event,
+  places,
+  eventTypes,
+  onClose,
+  onSuccess,
+}: {
+  event: CalendarEvent;
+  places: { _id: string; name: string }[];
+  eventTypes: { _id: string; key: string; label: string }[];
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    type: event.type || 'training',
+    date: format(new Date(event.date), 'yyyy-MM-dd'),
+    time: event.time || '09:00',
+    location: event.location || '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/events/${event._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          type: formData.type || 'training',
+          date: formData.date,
+          time: formData.time,
+          location: formData.location,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Erreur');
+        return;
+      }
+      onSuccess();
+    } catch (err) {
+      setError('Erreur lors de la modification');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg max-w-md w-full p-6">
+        <h2 className="text-xl font-bold mb-4">Modifier l&apos;événement</h2>
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 text-red-700 rounded text-sm">{error}</div>
+        )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+            <select
+              value={formData.type || 'training'}
+              onChange={(e) => setFormData({ ...formData, type: e.target.value || 'training' })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            >
+              {eventTypes.length === 0 ? (
+                <>
+                  <option value="training">Entraînement</option>
+                  <option value="tournament">Tournois (Salle ou extérieur)</option>
+                  <option value="match">Matchs</option>
+                  <option value="plateaux">Plateaux</option>
+                </>
+              ) : (
+                eventTypes.map((et) => (
+                  <option key={et._id} value={et.key}>
+                    {et.label}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+              <input
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Heure</label>
+              <input
+                type="time"
+                value={formData.time}
+                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Lieu</label>
+            {places.length > 0 ? (
+              <select
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="">Choisir un lieu</option>
+                {places.map((place) => (
+                  <option key={place._id} value={place.name}>
+                    {place.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="Saisir un lieu"
+              />
+            )}
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button type="button" onClick={onClose} className="px-4 py-2 border rounded-md hover:bg-gray-50">
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            >
+              {loading ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function CreateEventForm({
   teams,
   places,
@@ -328,11 +501,12 @@ function CreateEventForm({
   onSuccess: () => void;
 }) {
   const router = useRouter();
-  const defaultType = eventTypes.length > 0 ? eventTypes[0].key : 'training';
+  const trainingKey = eventTypes.find((et) => et.key === 'training')?.key || eventTypes[0]?.key || 'training';
+  const defaultType = trainingKey;
   const [formData, setFormData] = useState({
     type: defaultType,
     date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
-    time: '18:00',
+    time: '09:00',
     location: '',
     teamIds: [] as string[],
     selectAllTeams: false,
@@ -413,15 +587,16 @@ function CreateEventForm({
               Type
             </label>
             <select
-              value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+              value={formData.type || 'training'}
+              onChange={(e) => setFormData({ ...formData, type: e.target.value || 'training' })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
               {eventTypes.length === 0 ? (
                 <>
                   <option value="training">Entraînement</option>
-                  <option value="match">Match</option>
-                  <option value="tournament">Tournoi</option>
+                  <option value="tournament">Tournois (Salle ou extérieur)</option>
+                  <option value="match">Matchs</option>
+                  <option value="plateaux">Plateaux</option>
                 </>
               ) : (
                 eventTypes.map((et) => (
@@ -649,11 +824,12 @@ function CreateRecurrenceForm({
   onSuccess: () => void;
 }) {
   const router = useRouter();
-  const defaultType = eventTypes.length > 0 ? eventTypes[0].key : 'training';
+  const trainingKey = eventTypes.find((et) => et.key === 'training')?.key || eventTypes[0]?.key || 'training';
+  const defaultType = trainingKey;
   const [formData, setFormData] = useState({
     type: defaultType,
     dayOfWeek: '1',
-    time: '18:00',
+    time: '09:00',
     endTime: '',
     location: '',
     teamIds: [] as string[],
@@ -789,15 +965,16 @@ function CreateRecurrenceForm({
               Type
             </label>
             <select
-              value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+              value={formData.type || 'training'}
+              onChange={(e) => setFormData({ ...formData, type: e.target.value || 'training' })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
               {eventTypes.length === 0 ? (
                 <>
                   <option value="training">Entraînement</option>
-                  <option value="match">Match</option>
-                  <option value="tournament">Tournoi</option>
+                  <option value="tournament">Tournois (Salle ou extérieur)</option>
+                  <option value="match">Matchs</option>
+                  <option value="plateaux">Plateaux</option>
                 </>
               ) : (
                 eventTypes.map((et) => (

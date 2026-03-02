@@ -5,8 +5,9 @@ import { getAuthUser } from '@/lib/auth';
 
 const DEFAULT_EVENT_TYPES = [
   { key: 'training', label: 'Entraînement', order: 0 },
-  { key: 'match', label: 'Match', order: 1 },
-  { key: 'tournament', label: 'Tournoi', order: 2 },
+  { key: 'tournament', label: 'Tournois (Salle ou extérieur)', order: 1 },
+  { key: 'match', label: 'Matchs', order: 2 },
+  { key: 'plateaux', label: 'Plateaux', order: 3 },
 ];
 
 export async function GET(request: NextRequest) {
