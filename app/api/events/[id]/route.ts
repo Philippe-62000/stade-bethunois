@@ -3,6 +3,8 @@ import connectDB from '@/lib/mongodb';
 import Event from '@/models/Event';
 import EventType from '@/models/EventType';
 import '@/models/Team';
+import '@/models/Child';
+import '@/models/User';
 import { getAuthUser } from '@/lib/auth';
 
 export async function PATCH(

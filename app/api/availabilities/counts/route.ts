@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 import connectDB from '@/lib/mongodb';
 import Availability from '@/models/Availability';
 import Event from '@/models/Event';
+import '@/models/Child';
+import '@/models/Team';
 import { getAuthUser } from '@/lib/auth';
 
 async function computeCounts(eventIds: string[]) {

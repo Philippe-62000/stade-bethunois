@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import EventModificationAck from '@/models/EventModificationAck';
+import '@/models/User';
 import { getAuthUser } from '@/lib/auth';
 
 export async function POST(
@@ -23,7 +24,7 @@ export async function POST(
     await EventModificationAck.findOneAndUpdate(
       { eventId, userId: authUser.userId },
       { eventId, userId: authUser.userId },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     return NextResponse.json({ success: true });
