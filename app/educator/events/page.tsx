@@ -54,8 +54,13 @@ export default function EducatorEventsPage() {
         const eventsList = eventsData.events || [];
         setEvents(eventsList);
         if (eventsList.length > 0) {
-          const ids = eventsList.map((e: CalendarEvent) => e._id).join(',');
-          const countsRes = await fetch(`/api/availabilities/counts?eventIds=${ids}`, { credentials: 'include' });
+          const ids = eventsList.map((e: CalendarEvent) => e._id);
+          const countsRes = await fetch('/api/availabilities/counts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ eventIds: ids }),
+          });
           if (countsRes.ok) {
             const { counts } = await countsRes.json();
             setEventResponseCounts(counts || {});
