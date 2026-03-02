@@ -73,7 +73,7 @@ export default function LoginPage() {
       });
       const data = await res.json();
 
-      if (!res.ok) {
+      if (!res.ok || data.success === false) {
         setForgotMessage({ type: 'error', text: data.error || "Une erreur s'est produite." });
         return;
       }

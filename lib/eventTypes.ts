@@ -2,6 +2,7 @@ const DEFAULT_LABELS: Record<string, string> = {
   training: 'Entraînement',
   match: 'Matchs',
   tournament: 'Tournois (Salle ou extérieur)',
+  tournoi: 'Tournois (Salle ou extérieur)',
   plateaux: 'Plateaux',
 };
 

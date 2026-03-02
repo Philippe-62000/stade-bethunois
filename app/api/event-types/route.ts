@@ -10,6 +10,10 @@ const DEFAULT_EVENT_TYPES = [
   { key: 'training', label: 'Entraînement', order: 3 },
 ];
 
+const KEY_ALIASES: Record<string, string> = {
+  tournoi: 'tournament',
+};
+
 export async function GET(request: NextRequest) {
   try {
     const authUser = getAuthUser(request);
@@ -26,6 +30,26 @@ export async function GET(request: NextRequest) {
 
     if (eventTypes.length === 0) {
       await EventType.insertMany(DEFAULT_EVENT_TYPES);
+      eventTypes = await EventType.find({}).sort({ order: 1, label: 1 }).lean();
+    } else {
+      const toInsert: typeof DEFAULT_EVENT_TYPES = [];
+      for (const def of DEFAULT_EVENT_TYPES) {
+        let existing = eventTypes.find((et: { key: string }) => et.key === def.key);
+        if (!existing) {
+          const aliasKey = Object.keys(KEY_ALIASES).find((k) => KEY_ALIASES[k] === def.key);
+          existing = aliasKey ? eventTypes.find((et: { key: string }) => et.key === aliasKey) : undefined;
+        }
+        if (existing) {
+          if ((existing as { label: string }).label !== def.label) {
+            await EventType.updateOne({ key: (existing as { key: string }).key }, { $set: { label: def.label } });
+          }
+        } else {
+          toInsert.push(def);
+        }
+      }
+      if (toInsert.length > 0) {
+        await EventType.insertMany(toInsert);
+      }
       eventTypes = await EventType.find({}).sort({ order: 1, label: 1 }).lean();
     }
 

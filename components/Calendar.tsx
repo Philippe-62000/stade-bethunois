@@ -217,7 +217,7 @@ export default function Calendar({ events, availabilities = [], eventResponseCou
                   <span className="text-[10px] md:text-xs text-gray-500">+{dayEvents.length - 5}</span>
                 )}
               </div>
-              {acknowledgedEventIds.size > 0 && (() => {
+              {showMonthActions && (() => {
                 const unackedWithMods = dayEvents.filter(
                   (ev) =>
                     ev.modifiedFields &&

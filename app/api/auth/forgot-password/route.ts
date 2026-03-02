@@ -27,10 +27,11 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json(
         {
+          success: false,
           error:
             "Merci de vérifier votre adresse, nous n'avons pas cette adresse dans la liste. Si vous voulez vous inscrire merci de contacter l'administrateur du groupe.",
         },
-        { status: 404 }
+        { status: 200 }
       );
     }
 
