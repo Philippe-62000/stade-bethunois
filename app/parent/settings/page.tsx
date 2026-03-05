@@ -24,7 +24,7 @@ export default function ParentSettingsPage() {
 
   const fetchSettings = async () => {
     try {
-      const response = await fetch('/api/auth/me');
+      const response = await fetch('/api/auth/me', { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         if (data.user?.notificationSettings) {
@@ -45,6 +45,7 @@ export default function ParentSettingsPage() {
     try {
       const response = await fetch('/api/user/notification-settings', {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },

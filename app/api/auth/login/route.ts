@@ -97,12 +97,13 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
 
-    // Définir le cookie
+    // Définir le cookie (path: '/' pour qu'il soit envoyé à toutes les routes API)
     response.cookies.set('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 jours
+      path: '/',
     });
 
     return response;

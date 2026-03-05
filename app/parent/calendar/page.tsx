@@ -85,10 +85,10 @@ export default function ParentCalendarPage() {
   const fetchData = async () => {
     try {
       const [eventsRes, childrenRes, availabilitiesRes, eventTypesRes] = await Promise.all([
-        fetch('/api/events'),
-        fetch('/api/children'),
-        fetch('/api/availabilities'),
-        fetch('/api/event-types'),
+        fetch('/api/events', { credentials: 'include' }),
+        fetch('/api/children', { credentials: 'include' }),
+        fetch('/api/availabilities', { credentials: 'include' }),
+        fetch('/api/event-types', { credentials: 'include' }),
       ]);
 
       if (eventsRes.ok) {
@@ -155,6 +155,7 @@ export default function ParentCalendarPage() {
     try {
       const response = await fetch('/api/availabilities', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -194,6 +195,7 @@ export default function ParentCalendarPage() {
           promises.push(
             fetch('/api/availabilities', {
               method: 'POST',
+              credentials: 'include',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 eventId: event._id,
