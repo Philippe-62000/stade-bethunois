@@ -33,9 +33,13 @@ export async function PATCH(
       );
     }
 
-    const { type, date, time, location } = body;
+    const { type, date, time, location, cancelled } = body;
 
     const modifiedFields: { time?: boolean; location?: boolean; type?: boolean } = {};
+
+    if (cancelled === true) {
+      event.cancelled = true;
+    }
 
     if (type !== undefined) {
       const eventTypeDoc = await EventType.findOne({ key: type });

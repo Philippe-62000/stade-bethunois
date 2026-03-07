@@ -20,6 +20,7 @@ interface Event {
     category: string;
   };
   modifiedFields?: { time?: boolean; location?: boolean; type?: boolean };
+  cancelled?: boolean;
 }
 
 interface Child {
@@ -269,13 +270,13 @@ export default function ParentCalendarPage() {
         {children.length > 0 && (
           <div className="mb-4 bg-white rounded-lg shadow-md p-4">
             {children.length === 1 ? (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center justify-between w-full">
                 <span className="text-lg font-semibold text-gray-900">
                   Planning de {selectedChild?.name || children[0].name}
                 </span>
                 <Link
                   href="/parent/aide"
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium ml-auto"
                 >
                   Aide
                 </Link>
@@ -283,13 +284,13 @@ export default function ParentCalendarPage() {
             ) : (
               <div>
                 {selectedChild && (
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <div className="flex items-center justify-between w-full mb-2">
                     <span className="text-lg font-semibold text-gray-900">
                       Planning de {selectedChild.name}
                     </span>
                     <Link
                       href="/parent/aide"
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium ml-auto"
                     >
                       Aide
                     </Link>
@@ -364,34 +365,43 @@ export default function ParentCalendarPage() {
                             <span className="inline-block px-2 py-1 text-xs font-semibold rounded bg-blue-100 text-blue-800">
                               {getEventTypeLabel(event.type, eventTypes)}
                             </span>
+                            {event.cancelled && (
+                              <span className="inline-block ml-2 px-2 py-1 text-xs font-bold rounded bg-red-100 text-red-700">
+                                Annulé
+                              </span>
+                            )}
                             <p className="text-sm text-gray-600 mt-1">
                               {event.time} - {event.location}
                             </p>
                           </div>
                           <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                             <span className="text-sm font-medium">{selectedChild.name}</span>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleAvailabilityChange(event._id, 'present')}
-                                className={`flex-1 sm:flex-none px-4 py-2 text-sm rounded-md hover:opacity-90 active:opacity-80 touch-manipulation min-h-[44px] ${
-                                  availability?.status === 'present'
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-green-100 text-green-800 hover:bg-green-200'
-                                }`}
-                              >
-                                Présent
-                              </button>
-                              <button
-                                onClick={() => handleAvailabilityChange(event._id, 'absent')}
-                                className={`flex-1 sm:flex-none px-4 py-2 text-sm rounded-md hover:opacity-90 active:opacity-80 touch-manipulation min-h-[44px] ${
-                                  availability?.status === 'absent'
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-red-100 text-red-800 hover:bg-red-200'
-                                }`}
-                              >
-                                Absent
-                              </button>
-                            </div>
+                            {event.cancelled ? (
+                              <span className="text-sm font-bold text-red-600">Événement annulé</span>
+                            ) : (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleAvailabilityChange(event._id, 'present')}
+                                  className={`flex-1 sm:flex-none px-4 py-2 text-sm rounded-md hover:opacity-90 active:opacity-80 touch-manipulation min-h-[44px] ${
+                                    availability?.status === 'present'
+                                      ? 'bg-green-600 text-white'
+                                      : 'bg-green-100 text-green-800 hover:bg-green-200'
+                                  }`}
+                                >
+                                  Présent
+                                </button>
+                                <button
+                                  onClick={() => handleAvailabilityChange(event._id, 'absent')}
+                                  className={`flex-1 sm:flex-none px-4 py-2 text-sm rounded-md hover:opacity-90 active:opacity-80 touch-manipulation min-h-[44px] ${
+                                    availability?.status === 'absent'
+                                      ? 'bg-red-600 text-white'
+                                      : 'bg-red-100 text-red-800 hover:bg-red-200'
+                                  }`}
+                                >
+                                  Absent
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );

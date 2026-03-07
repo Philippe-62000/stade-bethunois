@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Event from '@/models/Event';
 import EventType from '@/models/EventType';
+import Availability from '@/models/Availability';
 import '@/models/Team';
 import '@/models/Child';
 import '@/models/User';
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
       .sort({ date: 1 });
 
     // Exclure les événements dont l'équipe a été supprimée (teamId null après populate)
-    const events = rawEvents
+    let events = rawEvents
       .filter((e: any) => e.teamId != null)
       .map((e: any) => {
         const doc = e.toObject ? e.toObject() : { ...e };
@@ -88,6 +89,33 @@ export async function GET(request: NextRequest) {
         }
         return doc;
       });
+
+    // Pour les parents : événements annulés → garder uniquement si le parent a répondu "présent"
+    if (authUser.role === 'parent') {
+      const Child = (await import('@/models/Child')).default;
+      const children = await Child.find({
+        $or: [
+          { parentId: authUser.userId },
+          { parentId2: authUser.userId }
+        ]
+      });
+      const childIds = children.map((c: any) => c._id);
+      const cancelledEventIds = events.filter((e: any) => e.cancelled).map((e: any) => e._id);
+      if (cancelledEventIds.length > 0) {
+        const presentAvailabilities = await Availability.find({
+          eventId: { $in: cancelledEventIds },
+          childId: { $in: childIds },
+          status: 'present',
+        });
+        const cancelledIdsWithPresent = new Set(
+          presentAvailabilities.map((a: any) => String(a.eventId))
+        );
+        events = events.filter((e: any) => {
+          if (!e.cancelled) return true;
+          return cancelledIdsWithPresent.has(String(e._id));
+        });
+      }
+    }
 
     return NextResponse.json({ events });
   } catch (error: any) {

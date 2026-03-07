@@ -15,6 +15,7 @@ export interface CalendarEvent {
   isRecurring?: boolean;
   recurringRuleId?: string | null;
   modifiedFields?: { time?: boolean; location?: boolean; type?: boolean };
+  cancelled?: boolean;
 }
 
 
@@ -218,6 +219,14 @@ export default function Calendar({ events, availabilities = [], eventResponseCou
                 )}
               </div>
               {showMonthActions && (() => {
+                const hasCancelled = dayEvents.some((ev) => ev.cancelled);
+                if (hasCancelled) {
+                  return (
+                    <div className="text-[10px] md:text-xs text-red-600 font-bold mt-0.5">
+                      Annulé
+                    </div>
+                  );
+                }
                 const unackedWithMods = dayEvents.filter(
                   (ev) =>
                     ev.modifiedFields &&

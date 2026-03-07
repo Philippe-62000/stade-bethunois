@@ -32,6 +32,7 @@ export default function EducatorEventsPage() {
   const [showDayEventsModal, setShowDayEventsModal] = useState(false);
   const [dayEventsList, setDayEventsList] = useState<CalendarEvent[]>([]);
   const [selectedEventForDelete, setSelectedEventForDelete] = useState<CalendarEvent | null>(null);
+  const [selectedEventForCancel, setSelectedEventForCancel] = useState<CalendarEvent | null>(null);
   const [selectedEventForEdit, setSelectedEventForEdit] = useState<CalendarEvent | null>(null);
   const [loading, setLoading] = useState(true);
   const [eventResponseCounts, setEventResponseCounts] = useState<Record<string, number>>({});
@@ -112,6 +113,25 @@ export default function EducatorEventsPage() {
       if (res.ok) {
         fetchData();
         setSelectedEventForDelete(null);
+        setShowDayEventsModal(false);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCancelEvent = async () => {
+    if (!selectedEventForCancel) return;
+    try {
+      const res = await fetch(`/api/events/${selectedEventForCancel._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ cancelled: true }),
+      });
+      if (res.ok) {
+        fetchData();
+        setSelectedEventForCancel(null);
         setShowDayEventsModal(false);
       }
     } catch (e) {
@@ -220,16 +240,19 @@ export default function EducatorEventsPage() {
               ) : (
                 dayEventsList.map(ev => (
                 <li key={ev._id} className="flex flex-col gap-1">
-                  <div className="w-full text-left px-3 py-2 rounded border border-gray-200 bg-gray-50">
-                    <div className="font-medium">
+                  <div className={`w-full text-left px-3 py-2 rounded border ${ev.cancelled ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
+                    <div className="font-medium flex items-center gap-2">
                       {getEventTypeLabel(ev.type, eventTypes)} — {ev.time}
+                      {ev.cancelled && (
+                        <span className="text-xs font-bold text-red-600">Annulé</span>
+                      )}
                     </div>
                     <div className="text-sm text-gray-600 mt-1">
                       <div><strong>Lieu:</strong> {ev.location}</div>
                       {ev.teamId?.name && <div><strong>Groupe:</strong> {ev.teamId.name} {ev.teamId.category && `(${ev.teamId.category})`}</div>}
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={() => {
@@ -250,6 +273,18 @@ export default function EducatorEventsPage() {
                     >
                       Supprimer
                     </button>
+                    {!ev.cancelled && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowDayEventsModal(false);
+                          setSelectedEventForCancel(ev);
+                        }}
+                        className="text-amber-600 hover:underline text-sm"
+                      >
+                        Annuler
+                      </button>
+                    )}
                   </div>
                 </li>
               ))
@@ -295,6 +330,39 @@ export default function EducatorEventsPage() {
             fetchData();
           }}
         />
+      )}
+
+      {selectedEventForCancel && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold mb-2">Annuler cet événement ?</h2>
+            <p className="text-gray-600 mb-4">
+              {getEventTypeLabel(selectedEventForCancel.type, eventTypes)} — {format(new Date(selectedEventForCancel.date), 'dd/MM/yyyy', { locale: fr })} à {selectedEventForCancel.time}
+              {selectedEventForCancel.teamId?.name && ` (${selectedEventForCancel.teamId.name})`}
+            </p>
+            <p className="text-sm text-gray-500 mb-4">
+              Les parents ayant répondu &quot;Présent&quot; verront &quot;Annulé&quot; en rouge. Les autres ne verront plus l&apos;événement.
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  handleCancelEvent();
+                }}
+                className="w-full px-4 py-3 bg-amber-600 text-white rounded-md hover:bg-amber-700"
+              >
+                Confirmer l&apos;annulation
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedEventForCancel(null)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Retour
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {selectedEventForDelete && !showDayEventsModal && (
