@@ -269,14 +269,30 @@ export default function ParentCalendarPage() {
         {children.length > 0 && (
           <div className="mb-4 bg-white rounded-lg shadow-md p-4">
             {children.length === 1 ? (
-              <div className="text-lg font-semibold text-gray-900">
-                Planning de {selectedChild?.name || children[0].name}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-lg font-semibold text-gray-900">
+                  Planning de {selectedChild?.name || children[0].name}
+                </span>
+                <Link
+                  href="/parent/aide"
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Aide
+                </Link>
               </div>
             ) : (
               <div>
                 {selectedChild && (
-                  <div className="text-lg font-semibold text-gray-900 mb-2">
-                    Planning de {selectedChild.name}
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <span className="text-lg font-semibold text-gray-900">
+                      Planning de {selectedChild.name}
+                    </span>
+                    <Link
+                      href="/parent/aide"
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Aide
+                    </Link>
                   </div>
                 )}
                 <label className="block text-sm font-medium text-gray-700 mb-2">
