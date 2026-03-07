@@ -308,6 +308,18 @@ export default function ParentCalendarPage() {
               showMonthActions={true}
               acknowledgedEventIds={acknowledgedEventIds}
             />
+            <div className="flex flex-wrap items-center justify-between gap-3 mt-4 p-3 bg-gray-100 rounded-lg">
+              <span className="text-sm text-gray-600">
+                {format(new Date(), 'dd/MM/yyyy HH:mm')}
+              </span>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 active:bg-blue-800 text-sm font-medium touch-manipulation min-h-[44px]"
+              >
+                Actualiser
+              </button>
+            </div>
           </div>
 
           <div className="lg:col-span-1 order-1 lg:order-2">
