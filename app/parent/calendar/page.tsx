@@ -242,8 +242,15 @@ export default function ParentCalendarPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <div className="text-lg">Chargement...</div>
+        <Link
+          href="/login"
+          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
+        >
+          Connexion
+        </Link>
+        <p className="text-sm text-gray-500">Si la page ne charge pas, cliquez sur Connexion pour vous reconnecter.</p>
       </div>
     );
   }
@@ -254,7 +261,13 @@ export default function ParentCalendarPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold text-gray-900">Calendrier</h1>
-            <div className="flex gap-4">
+            <div className="flex gap-4 items-center">
+              <Link
+                href="/login"
+                className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
+              >
+                Connexion
+              </Link>
               <Link
                 href="/parent/change-password"
                 className="text-sm text-blue-600 hover:text-blue-500"
@@ -329,13 +342,21 @@ export default function ParentCalendarPage() {
               <span className="text-sm text-gray-600">
                 {format(new Date(), 'dd/MM/yyyy HH:mm')}
               </span>
-              <button
-                type="button"
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 active:bg-blue-800 text-sm font-medium touch-manipulation min-h-[44px]"
-              >
-                Actualiser
-              </button>
+              <div className="flex gap-2">
+                <Link
+                  href="/login"
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 active:bg-green-800 text-sm font-medium touch-manipulation min-h-[44px] inline-flex items-center justify-center"
+                >
+                  Connexion
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 active:bg-blue-800 text-sm font-medium touch-manipulation min-h-[44px]"
+                >
+                  Actualiser
+                </button>
+              </div>
             </div>
           </div>
 
