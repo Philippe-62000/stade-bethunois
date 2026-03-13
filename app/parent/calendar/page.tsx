@@ -342,21 +342,13 @@ export default function ParentCalendarPage() {
               <span className="text-sm text-gray-600">
                 {format(new Date(), 'dd/MM/yyyy HH:mm')}
               </span>
-              <div className="flex gap-2">
-                <Link
-                  href="/login"
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 active:bg-green-800 text-sm font-medium touch-manipulation min-h-[44px] inline-flex items-center justify-center"
-                >
-                  Connexion
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => window.location.reload()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 active:bg-blue-800 text-sm font-medium touch-manipulation min-h-[44px]"
-                >
-                  Actualiser
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 active:bg-blue-800 text-sm font-medium touch-manipulation min-h-[44px]"
+              >
+                Actualiser
+              </button>
             </div>
           </div>
 
