@@ -26,6 +26,8 @@ export default function CreateFamilyPage() {
     role: 'parent' as 'parent' | 'educator' | 'admin',
     children: [] as Array<{ name: string; teamId: string }>,
   });
+  /** Équipes auxquelles l’éducateur est affecté (affichage planning / présences) */
+  const [educatorTeamIds, setEducatorTeamIds] = useState<string[]>([]);
 
   useEffect(() => {
     fetch('/api/auth/me', { credentials: 'include' })
@@ -40,6 +42,26 @@ export default function CreateFamilyPage() {
       })
       .catch(() => router.replace('/login'));
   }, [router]);
+
+  useEffect(() => {
+    if (formData.role !== 'educator') {
+      setEducatorTeamIds([]);
+    }
+  }, [formData.role]);
+
+  const toggleEducatorTeam = (teamId: string) => {
+    setEducatorTeamIds((prev) =>
+      prev.includes(teamId) ? prev.filter((id) => id !== teamId) : [...prev, teamId]
+    );
+  };
+
+  const selectAllEducatorTeams = () => {
+    setEducatorTeamIds(teams.map((t) => t._id));
+  };
+
+  const selectNoneEducatorTeams = () => {
+    setEducatorTeamIds([]);
+  };
 
   const fetchTeams = async () => {
     try {
@@ -63,7 +85,10 @@ export default function CreateFamilyPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          educatorTeamIds: formData.role === 'educator' ? educatorTeamIds : undefined,
+        }),
       });
 
       const data = await res.json();
@@ -212,7 +237,7 @@ export default function CreateFamilyPage() {
               </label>
               <select
                 value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value as 'parent' | 'educator' | 'admin' })}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
               >
@@ -221,6 +246,57 @@ export default function CreateFamilyPage() {
                 <option value="admin">Administrateur</option>
               </select>
             </div>
+
+            {formData.role === 'educator' && (
+              <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <h2 className="text-lg font-semibold mb-2">Équipes visibles par cet éducateur</h2>
+                <p className="text-sm text-gray-600 mb-3">
+                  Cochez les équipes dont cet éducateur pourra voir les événements et les présences. Une même équipe ne peut avoir qu’un éducateur principal : l’affectation remplace l’éventuel éducateur précédent sur l’équipe.
+                </p>
+                {teams.length === 0 ? (
+                  <p className="text-amber-800 text-sm">
+                    Aucune équipe en base. Créez des équipes (menu administrateur → équipes) puis revenez sur cette page.
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <button
+                        type="button"
+                        onClick={selectAllEducatorTeams}
+                        className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-100"
+                      >
+                        Tout sélectionner
+                      </button>
+                      <button
+                        type="button"
+                        onClick={selectNoneEducatorTeams}
+                        className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-100"
+                      >
+                        Tout désélectionner
+                      </button>
+                    </div>
+                    <ul className="space-y-2 max-h-56 overflow-y-auto border border-gray-200 rounded-md p-3 bg-white">
+                      {teams.map((team) => (
+                        <li key={team._id}>
+                          <label className="flex items-center gap-3 cursor-pointer text-sm">
+                            <input
+                              type="checkbox"
+                              checked={educatorTeamIds.includes(team._id)}
+                              onChange={() => toggleEducatorTeam(team._id)}
+                              className="rounded border-gray-300"
+                            />
+                            <span>
+                              <span className="font-medium">{team.name}</span>
+                              <span className="text-gray-500"> ({team.category})</span>
+                            </span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
+            )}
 
             <div>
               <div className="flex justify-between items-center mb-4">

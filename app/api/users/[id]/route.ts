@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import '@/models/User';
 import User from '@/models/User';
-import { getAuthUser, hashPassword } from '@/lib/auth';
+import { getAuthUser } from '@/lib/auth';
+import { syncEducatorTeams, clearEducatorFromAllTeams } from '@/lib/educatorTeams';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -18,7 +19,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const { id } = await params;
     const body = await request.json();
-    const { name, email, role } = body;
+    const { name, email, role, educatorTeamIds } = body;
 
     if (!name || !email) {
       return NextResponse.json(
@@ -34,6 +35,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         { status: 404 }
       );
     }
+
+    const prevRole = user.role;
 
     // Vérifier si l'email est déjà utilisé par un autre utilisateur
     if (email.toLowerCase() !== user.email.toLowerCase()) {
@@ -53,6 +56,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       user.role = role;
     }
     await user.save();
+
+    const newRole = user.role;
+    if (prevRole === 'educator' && newRole !== 'educator') {
+      await clearEducatorFromAllTeams(id);
+    } else if (newRole === 'educator' && Array.isArray(educatorTeamIds)) {
+      await syncEducatorTeams(id, educatorTeamIds);
+    }
 
     return NextResponse.json({
       message: 'Utilisateur mis à jour avec succès',
@@ -109,6 +119,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         { error: 'Impossible de supprimer le dernier administrateur' },
         { status: 400 }
       );
+    }
+
+    if (user.role === 'educator') {
+      await clearEducatorFromAllTeams(id);
     }
 
     await User.findByIdAndDelete(id);

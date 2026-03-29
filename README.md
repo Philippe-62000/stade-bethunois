@@ -12,7 +12,7 @@ Application web pour gérer les présences des enfants dans un club de foot.
 
 ### Page Présences (`/educator/availabilities`)
 
-- **Événements visibles** : si l’éducateur a au moins une équipe avec son `educatorId`, seuls les événements de ces équipes ; sinon (aucune équipe rattachée à son compte) la liste suit le même périmètre que l’admin — tous les événements du club.
+- **Événements visibles** : uniquement les équipes dont l’éducateur est l’`educatorId` (affectation à la création du compte ou dans Paramètres → modifier l’éducateur). Aucune équipe affectée → aucun événement.
 - Le filtre **« À partir du »** peut viser une date passée (pas de limite « min = aujourd’hui ») pour consulter des présences antérieures.
 - Le filtre utilise par défaut la date du jour si aucun paramètre `?date=` n’est présent dans l’URL.
 - Les boutons **« Retour au menu »** (vers l’admin) et **« Retour aux événements »** ne s’affichent que pour un utilisateur connecté avec le rôle **administrateur**. Les **éducateurs** voient uniquement l’en-tête « Présences » et le contenu utile à leur mission, sans ces raccourcis.
@@ -26,8 +26,12 @@ Application web pour gérer les présences des enfants dans un club de foot.
 ### Création de famille (admin)
 
 - **Parent** : au moins un enfant obligatoire.
-- **Éducateur** : aucun enfant obligatoire (compte dédié au planning / équipes sans fiche enfant).
+- **Éducateur** : aucun enfant obligatoire ; cases à cocher pour **affecter une ou plusieurs équipes** (tout sélectionner / tout désélectionner). Seules ces équipes apparaissent dans son planning / présences.
 - **Administrateur** : inchangé, enfants optionnels.
+
+### Modifier un éducateur (Paramètres)
+
+- Même principe : liste des équipes avec cases à cocher pour ajouter ou retirer des affectations (le dernier éducateur affecté à une équipe remplace le précédent sur cette équipe).
 
 ## Déploiement (Vercel)
 

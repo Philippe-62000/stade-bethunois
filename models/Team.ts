@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface ITeam extends Document {
   name: string;
   category: string; // ex: "U12", "U15"
-  educatorId: mongoose.Types.ObjectId;
+  educatorId: mongoose.Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,7 +21,8 @@ const TeamSchema = new Schema<ITeam>(
     educatorId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false,
+      default: null,
     },
   },
   {

@@ -4,6 +4,7 @@ import User from '@/models/User';
 import Child from '@/models/Child';
 import '@/models/Team';
 import { getAuthUser } from '@/lib/auth';
+import { syncEducatorTeams } from '@/lib/educatorTeams';
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
@@ -26,6 +27,7 @@ export async function POST(request: NextRequest) {
       parent2Email,
       children,
       role,
+      educatorTeamIds,
     } = body;
 
     // Validation
@@ -126,6 +128,11 @@ export async function POST(request: NextRequest) {
         const child = await Child.create(childObj);
         createdChildren.push(child);
       }
+    }
+
+    if (role === 'educator') {
+      const ids = Array.isArray(educatorTeamIds) ? educatorTeamIds : [];
+      await syncEducatorTeams(parent1._id.toString(), ids);
     }
 
     return NextResponse.json(

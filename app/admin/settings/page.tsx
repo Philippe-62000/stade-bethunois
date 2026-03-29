@@ -544,6 +544,7 @@ export default function AdminSettingsPage() {
 
       {editingUser && (
         <EditUserModal
+          key={editingUser._id}
           user={editingUser}
           onClose={() => {
             setEditingUser(null);
@@ -562,6 +563,13 @@ function editModalTitle(role: string) {
   return "Modifier l'utilisateur";
 }
 
+interface TeamRow {
+  _id: string;
+  name: string;
+  category: string;
+  educatorId?: { _id: string; name?: string; email?: string } | string | null;
+}
+
 function EditUserModal({
   user,
   onClose,
@@ -574,8 +582,48 @@ function EditUserModal({
     email: user.email,
     role: user.role,
   });
+  const [educatorTeamIds, setEducatorTeamIds] = useState<string[]>([]);
+  const [teamsList, setTeamsList] = useState<TeamRow[]>([]);
+  const [loadingTeams, setLoadingTeams] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (formData.role !== 'educator') {
+      return;
+    }
+    let cancelled = false;
+    setLoadingTeams(true);
+    fetch('/api/teams', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((d) => {
+        if (cancelled) return;
+        const list: TeamRow[] = d.teams || [];
+        setTeamsList(list);
+        const sel = list
+          .filter((t) => {
+            const eid = t.educatorId && typeof t.educatorId === 'object' ? t.educatorId._id : t.educatorId;
+            return eid != null && String(eid) === user._id;
+          })
+          .map((t) => t._id);
+        setEducatorTeamIds(sel);
+      })
+      .catch(() => {
+        if (!cancelled) setTeamsList([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingTeams(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user._id, formData.role]);
+
+  const toggleEducatorTeam = (teamId: string) => {
+    setEducatorTeamIds((prev) =>
+      prev.includes(teamId) ? prev.filter((id) => id !== teamId) : [...prev, teamId]
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -583,11 +631,19 @@ function EditUserModal({
     setLoading(true);
 
     try {
+      const payload: Record<string, unknown> = {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+      };
+      if (formData.role === 'educator') {
+        payload.educatorTeamIds = educatorTeamIds;
+      }
       const res = await fetch(`/api/users/${user._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -605,8 +661,8 @@ function EditUserModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-md w-full p-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-white rounded-lg max-w-xl w-full p-6 my-8">
         <h2 className="text-xl font-bold mb-4">{editModalTitle(user.role)}</h2>
 
         {error && (
@@ -646,7 +702,7 @@ function EditUserModal({
             </label>
             <select
               value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value as ListedUser['role'] })}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
@@ -655,6 +711,57 @@ function EditUserModal({
               <option value="parent">Parent</option>
             </select>
           </div>
+
+          {formData.role === 'educator' && (
+            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <h3 className="text-sm font-semibold text-gray-900 mb-1">Équipes affectées</h3>
+              <p className="text-xs text-gray-600 mb-3">
+                Cochez les équipes dont cet éducateur voit le planning. Cocher une équipe déjà assignée à un autre éducateur la réassigne ici.
+              </p>
+              {loadingTeams ? (
+                <p className="text-sm text-gray-500">Chargement des équipes…</p>
+              ) : teamsList.length === 0 ? (
+                <p className="text-sm text-amber-800">Aucune équipe. Créez des équipes depuis le menu administrateur.</p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setEducatorTeamIds(teamsList.map((t) => t._id))}
+                      className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100"
+                    >
+                      Tout sélectionner
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEducatorTeamIds([])}
+                      className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100"
+                    >
+                      Tout désélectionner
+                    </button>
+                  </div>
+                  <ul className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-md p-3 bg-white text-sm">
+                    {teamsList.map((team) => (
+                      <li key={team._id}>
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={educatorTeamIds.includes(team._id)}
+                            onChange={() => toggleEducatorTeam(team._id)}
+                            className="rounded border-gray-300"
+                          />
+                          <span>
+                            <span className="font-medium">{team.name}</span>
+                            <span className="text-gray-500"> ({team.category})</span>
+                          </span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-4">
             <button
@@ -666,7 +773,7 @@ function EditUserModal({
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (formData.role === 'educator' && loadingTeams)}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
               {loading ? 'Modification...' : 'Modifier'}
