@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import emailjs from '@emailjs/browser';
+import { ALL_APP_ROLES, ROLE_LABELS, type AppRole } from '@/lib/userRoles';
 
 interface Place {
   _id: string;
@@ -21,7 +22,27 @@ interface ListedUser {
   _id: string;
   name: string;
   email: string;
-  role: string;
+  roles: string[];
+  role?: string;
+}
+
+function listedUserRoles(u: ListedUser): string[] {
+  if (u.roles?.length) return u.roles;
+  if (u.role) return [u.role];
+  return [];
+}
+
+function primaryRoleForLabel(u: ListedUser): string {
+  const rs = listedUserRoles(u);
+  if (rs.includes('admin')) return 'admin';
+  if (rs.includes('educator')) return 'educator';
+  return 'parent';
+}
+
+function formatRolesLine(u: ListedUser): string {
+  return listedUserRoles(u)
+    .map((r) => ROLE_LABELS[r as AppRole] || r)
+    .join(' · ');
 }
 
 export default function AdminSettingsPage() {
@@ -195,7 +216,7 @@ export default function AdminSettingsPage() {
   };
 
   const handleDeleteUser = async (user: ListedUser) => {
-    if (!confirm(`Supprimer ${deleteConfirmLabel(user.role)} ?`)) return;
+    if (!confirm(`Supprimer ${deleteConfirmLabel(primaryRoleForLabel(user))} ?`)) return;
     setDeletingUserId(user._id);
     try {
       const res = await fetch(`/api/users/${user._id}`, {
@@ -204,11 +225,8 @@ export default function AdminSettingsPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        if (user.role === 'admin') {
-          setAdmins((prev) => prev.filter((a) => a._id !== user._id));
-        } else if (user.role === 'educator') {
-          setEducators((prev) => prev.filter((u) => u._id !== user._id));
-        }
+        setAdmins((prev) => prev.filter((a) => a._id !== user._id));
+        setEducators((prev) => prev.filter((u) => u._id !== user._id));
       } else {
         alert(data.error || 'Erreur lors de la suppression');
       }
@@ -447,6 +465,7 @@ export default function AdminSettingsPage() {
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rôles</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
@@ -455,6 +474,7 @@ export default function AdminSettingsPage() {
                     <tr key={admin._id}>
                       <td className="px-4 py-3 text-sm text-gray-900">{admin.name}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{admin.email}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{formatRolesLine(admin)}</td>
                       <td className="px-4 py-3 text-right text-sm space-x-2">
                         <button
                           type="button"
@@ -501,6 +521,7 @@ export default function AdminSettingsPage() {
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rôles</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
@@ -509,6 +530,7 @@ export default function AdminSettingsPage() {
                     <tr key={edu._id}>
                       <td className="px-4 py-3 text-sm text-gray-900">{edu.name}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{edu.email}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{formatRolesLine(edu)}</td>
                       <td className="px-4 py-3 text-right text-sm space-x-2">
                         <button
                           type="button"
@@ -557,10 +579,16 @@ export default function AdminSettingsPage() {
   );
 }
 
-function editModalTitle(role: string) {
-  if (role === 'admin') return "Modifier l'administrateur";
-  if (role === 'educator') return "Modifier l'éducateur";
-  return "Modifier l'utilisateur";
+function editModalTitleFromRoles(roles: AppRole[]): string {
+  if (roles.length > 1) return "Modifier l'utilisateur";
+  if (roles[0] === 'admin') return "Modifier l'administrateur";
+  if (roles[0] === 'educator') return "Modifier l'éducateur";
+  return 'Modifier le parent';
+}
+
+function initialRolesFromUser(u: ListedUser): AppRole[] {
+  const raw = listedUserRoles(u).filter((r) => ALL_APP_ROLES.includes(r as AppRole)) as AppRole[];
+  return raw.length ? raw : ['parent'];
 }
 
 interface TeamRow {
@@ -580,8 +608,21 @@ function EditUserModal({
   const [formData, setFormData] = useState({
     name: user.name,
     email: user.email,
-    role: user.role,
+    roles: initialRolesFromUser(user),
   });
+
+  const toggleFormRole = (r: AppRole) => {
+    setFormData((fd) => {
+      if (fd.roles.includes(r)) {
+        const next = fd.roles.filter((x) => x !== r);
+        return { ...fd, roles: next.length >= 1 ? next : fd.roles };
+      }
+      return {
+        ...fd,
+        roles: [...fd.roles, r].sort((a, b) => ALL_APP_ROLES.indexOf(a) - ALL_APP_ROLES.indexOf(b)),
+      };
+    });
+  };
   const [educatorTeamIds, setEducatorTeamIds] = useState<string[]>([]);
   const [teamsList, setTeamsList] = useState<TeamRow[]>([]);
   const [loadingTeams, setLoadingTeams] = useState(false);
@@ -589,7 +630,7 @@ function EditUserModal({
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (formData.role !== 'educator') {
+    if (!formData.roles.includes('educator')) {
       return;
     }
     let cancelled = false;
@@ -617,7 +658,7 @@ function EditUserModal({
     return () => {
       cancelled = true;
     };
-  }, [user._id, formData.role]);
+  }, [user._id, formData.roles]);
 
   const toggleEducatorTeam = (teamId: string) => {
     setEducatorTeamIds((prev) =>
@@ -634,9 +675,9 @@ function EditUserModal({
       const payload: Record<string, unknown> = {
         name: formData.name,
         email: formData.email,
-        role: formData.role,
+        roles: formData.roles,
       };
-      if (formData.role === 'educator') {
+      if (formData.roles.includes('educator')) {
         payload.educatorTeamIds = educatorTeamIds;
       }
       const res = await fetch(`/api/users/${user._id}`, {
@@ -663,7 +704,7 @@ function EditUserModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
       <div className="bg-white rounded-lg max-w-xl w-full p-6 my-8">
-        <h2 className="text-xl font-bold mb-4">{editModalTitle(user.role)}</h2>
+        <h2 className="text-xl font-bold mb-4">{editModalTitleFromRoles(formData.roles)}</h2>
 
         {error && (
           <div className="mb-4 p-3 bg-red-50 text-red-700 rounded text-sm">{error}</div>
@@ -697,22 +738,23 @@ function EditUserModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Rôle *
-            </label>
-            <select
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as ListedUser['role'] })}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="admin">Administrateur</option>
-              <option value="educator">Éducateur</option>
-              <option value="parent">Parent</option>
-            </select>
+            <span className="block text-sm font-medium text-gray-700 mb-2">Rôles *</span>
+            <div className="space-y-2 border border-gray-200 rounded-md p-3 bg-gray-50">
+              {ALL_APP_ROLES.map((r) => (
+                <label key={r} className="flex items-center gap-3 cursor-pointer text-sm">
+                  <input
+                    type="checkbox"
+                    checked={formData.roles.includes(r)}
+                    onChange={() => toggleFormRole(r)}
+                    className="rounded border-gray-300"
+                  />
+                  <span>{ROLE_LABELS[r]}</span>
+                </label>
+              ))}
+            </div>
           </div>
 
-          {formData.role === 'educator' && (
+          {formData.roles.includes('educator') && (
             <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
               <h3 className="text-sm font-semibold text-gray-900 mb-1">Équipes affectées</h3>
               <p className="text-xs text-gray-600 mb-3">
@@ -773,7 +815,7 @@ function EditUserModal({
             </button>
             <button
               type="submit"
-              disabled={loading || (formData.role === 'educator' && loadingTeams)}
+              disabled={loading || (formData.roles.includes('educator') && loadingTeams)}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
               {loading ? 'Modification...' : 'Modifier'}

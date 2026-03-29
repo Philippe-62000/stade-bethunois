@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IUser extends Document {
   email: string;
   password: string;
-  role: 'parent' | 'educator' | 'admin';
+  roles: ('parent' | 'educator' | 'admin')[];
   name: string;
   notificationSettings: {
     enabled: boolean;
@@ -26,10 +26,16 @@ const UserSchema = new Schema<IUser>(
       type: String,
       required: true,
     },
-    role: {
-      type: String,
+    roles: {
+      type: [String],
       enum: ['parent', 'educator', 'admin'],
       required: true,
+      validate: {
+        validator(v: string[]) {
+          return Array.isArray(v) && v.length >= 1 && v.length <= 3;
+        },
+        message: 'Au moins un rôle requis',
+      },
     },
     name: {
       type: String,

@@ -5,16 +5,14 @@ import Child from '@/models/Child';
 import '@/models/Team';
 import { getAuthUser } from '@/lib/auth';
 import { syncEducatorTeams } from '@/lib/educatorTeams';
+import { normalizeRolesInput, type AppRole } from '@/lib/userRoles';
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
     const authUser = getAuthUser(request);
     if (!authUser || authUser.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Non autorisé' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
     }
 
     await connectDB();
@@ -26,66 +24,53 @@ export async function POST(request: NextRequest) {
       parent2Name,
       parent2Email,
       children,
-      role,
+      role: legacyRole,
+      roles: rolesInput,
       educatorTeamIds,
     } = body;
 
-    // Validation
     if (!parentName || !parentEmail) {
-      return NextResponse.json(
-        { error: 'Nom et email du parent 1 requis' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Nom et email du parent 1 requis' }, { status: 400 });
     }
 
-    if (!role || !['parent', 'educator', 'admin'].includes(role)) {
-      return NextResponse.json(
-        { error: 'Rôle requis et valide' },
-        { status: 400 }
-      );
+    const roles: AppRole[] | null =
+      normalizeRolesInput(rolesInput) ??
+      (legacyRole && ['parent', 'educator', 'admin'].includes(legacyRole) ? [legacyRole as AppRole] : null);
+
+    if (!roles || roles.length === 0) {
+      return NextResponse.json({ error: 'Au moins un rôle requis' }, { status: 400 });
     }
 
-    // Enfants obligatoires uniquement pour les parents (l’éducateur consulte le planning sans enfant rattaché)
-    if (role === 'parent') {
+    if (roles.includes('parent')) {
       if (!children || !Array.isArray(children) || children.length === 0) {
         return NextResponse.json(
-          { error: 'Au moins un enfant requis pour les comptes parents' },
+          { error: 'Au moins un enfant requis lorsque le compte inclut le rôle parent' },
           { status: 400 }
         );
       }
     }
 
-    // S'assurer que children est un tableau (même vide pour les admins)
     const childrenArray = Array.isArray(children) ? children : [];
 
-    // Vérifier si les emails existent déjà
     const existingUser1 = await User.findOne({ email: parentEmail.toLowerCase() });
     if (existingUser1) {
-      return NextResponse.json(
-        { error: `L'email ${parentEmail} est déjà utilisé` },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: `L'email ${parentEmail} est déjà utilisé` }, { status: 400 });
     }
 
     if (parent2Email) {
       const existingUser2 = await User.findOne({ email: parent2Email.toLowerCase() });
       if (existingUser2) {
-        return NextResponse.json(
-          { error: `L'email ${parent2Email} est déjà utilisé` },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: `L'email ${parent2Email} est déjà utilisé` }, { status: 400 });
       }
     }
 
-    // Générer un mot de passe aléatoire (non utilisé car connexion par token)
     const randomPassword = crypto.randomBytes(32).toString('hex');
 
-    // Créer le parent 1
     const parent1 = await User.create({
       email: parentEmail.toLowerCase(),
-      password: randomPassword, // Mot de passe non utilisé
+      password: randomPassword,
       name: parentName,
-      role,
+      roles,
       notificationSettings: {
         enabled: true,
         reminderEnabled: true,
@@ -98,7 +83,7 @@ export async function POST(request: NextRequest) {
         email: parent2Email.toLowerCase(),
         password: crypto.randomBytes(32).toString('hex'),
         name: parent2Name,
-        role,
+        roles,
         notificationSettings: {
           enabled: true,
           reminderEnabled: true,
@@ -106,12 +91,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Créer les enfants si la liste en contient (parents : au moins un ; éducateur / admin : optionnel)
     const createdChildren = [];
     if (childrenArray.length > 0) {
       for (const childData of childrenArray) {
         if (!childData.name || !childData.teamId) {
-          continue; // Ignorer les enfants invalides
+          continue;
         }
 
         const childObj: any = {
@@ -130,7 +114,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (role === 'educator') {
+    if (roles.includes('educator')) {
       const ids = Array.isArray(educatorTeamIds) ? educatorTeamIds : [];
       await syncEducatorTeams(parent1._id.toString(), ids);
     }
@@ -143,12 +127,14 @@ export async function POST(request: NextRequest) {
           name: parent1.name,
           email: parent1.email,
         },
-        parent2: parent2 ? {
-          id: parent2._id.toString(),
-          name: parent2.name,
-          email: parent2.email,
-        } : null,
-        children: createdChildren.map(c => ({
+        parent2: parent2
+          ? {
+              id: parent2._id.toString(),
+              name: parent2.name,
+              email: parent2.email,
+            }
+          : null,
+        children: createdChildren.map((c) => ({
           id: c._id.toString(),
           name: c.name,
         })),

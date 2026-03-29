@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     const user = await User.findOne({
       email: trimmedEmail,
-      role: 'parent',
+      roles: 'parent',
     });
 
     if (!user) {

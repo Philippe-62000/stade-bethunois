@@ -8,10 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     const authUser = getAuthUser(request);
     if (!authUser || authUser.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Non autorisé' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -19,17 +16,12 @@ export async function GET(request: NextRequest) {
 
     await connectDB();
 
-    const query = role ? { role } : {};
-    const users = await User.find(query)
-      .select('name email role')
-      .lean();
+    const query = role ? { roles: role } : {};
+    const users = await User.find(query).select('name email roles').lean();
 
     return NextResponse.json({ users });
   } catch (error: any) {
     console.error('Erreur lors de la récupération des utilisateurs:', error);
-    return NextResponse.json(
-      { error: 'Erreur serveur' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

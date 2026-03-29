@@ -10,6 +10,10 @@ Application web pour gérer les présences des enfants dans un club de foot.
 | Éducateur | `/educator/availabilities?date=AAAA-MM-JJ` (date du jour, fuseau local du navigateur) |
 | Administrateur | `/admin` |
 
+Un **même compte** (même email) peut cumuler plusieurs rôles (ex. parent + éducateur, parent + administrateur). Les rôles sont stockés dans un tableau `roles` en base.
+
+**Connexion** : si le compte a **plusieurs** rôles, l’application demande **quel profil utiliser pour cette session** (mot de passe, code ou lien magique). Le JWT ne contient que le **rôle actif** ; pour agir sous un autre profil, il faut se déconnecter et se reconnecter en choisissant l’autre rôle.
+
 ### Page Présences (`/educator/availabilities`)
 
 - **Événements visibles** : uniquement les équipes dont l’éducateur est l’`educatorId` (affectation à la création du compte ou dans Paramètres → modifier l’éducateur). Aucune équipe affectée → aucun événement.
@@ -25,7 +29,8 @@ Application web pour gérer les présences des enfants dans un club de foot.
 
 ### Création de famille (admin)
 
-- **Parent** : au moins un enfant obligatoire.
+- **Rôles** : cases à cocher (Parent, Éducateur, Administrateur) — au moins une. Combinaisons possibles (ex. parent + éducateur).
+- **Parent** : au moins un enfant obligatoire si le rôle parent est coché.
 - **Éducateur** : aucun enfant obligatoire ; cases à cocher pour **affecter une ou plusieurs équipes** (tout sélectionner / tout désélectionner). Seules ces équipes apparaissent dans son planning / présences.
 - **Administrateur** : inchangé, enfants optionnels.
 

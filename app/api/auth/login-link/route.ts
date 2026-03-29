@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongodb';
 import LoginToken from '@/models/LoginToken';
 import User from '@/models/User';
 import { getAuthUser } from '@/lib/auth';
+import { getRolesFromUserDoc } from '@/lib/userRoles';
 import crypto from 'crypto';
 
 const TOKEN_VALIDITY_HOURS = 24;
@@ -35,12 +36,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Accepter tous les rôles (parent, educator, admin)
-    if (!['parent', 'educator', 'admin'].includes(user.role)) {
-      return NextResponse.json(
-        { error: 'Rôle utilisateur invalide' },
-        { status: 400 }
-      );
+    const rs = getRolesFromUserDoc(user.toObject());
+    if (rs.length === 0) {
+      return NextResponse.json({ error: 'Rôle utilisateur invalide' }, { status: 400 });
     }
 
     // Générer un code provisoire (6 chiffres) sans expiration

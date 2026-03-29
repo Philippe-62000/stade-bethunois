@@ -4,63 +4,57 @@ import '@/models/User';
 import User from '@/models/User';
 import { getAuthUser } from '@/lib/auth';
 import { syncEducatorTeams, clearEducatorFromAllTeams } from '@/lib/educatorTeams';
+import { getRolesFromUserDoc, normalizeRolesInput, type AppRole } from '@/lib/userRoles';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authUser = getAuthUser(request);
     if (!authUser || authUser.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Non autorisé' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
     }
 
     await connectDB();
 
     const { id } = await params;
     const body = await request.json();
-    const { name, email, role, educatorTeamIds } = body;
+    const { name, email, roles: rolesBody, role: legacyRole, educatorTeamIds } = body;
 
     if (!name || !email) {
-      return NextResponse.json(
-        { error: 'Nom et email requis' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Nom et email requis' }, { status: 400 });
     }
 
     const user = await User.findById(id);
     if (!user) {
-      return NextResponse.json(
-        { error: 'Utilisateur introuvable' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 });
     }
 
-    const prevRole = user.role;
+    const prevRoles = getRolesFromUserDoc(user.toObject());
 
-    // Vérifier si l'email est déjà utilisé par un autre utilisateur
     if (email.toLowerCase() !== user.email.toLowerCase()) {
       const existingUser = await User.findOne({ email: email.toLowerCase() });
       if (existingUser && existingUser._id.toString() !== id) {
-        return NextResponse.json(
-          { error: `L'email ${email} est déjà utilisé` },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: `L'email ${email} est déjà utilisé` }, { status: 400 });
       }
     }
 
-    // Mettre à jour l'utilisateur
+    let nextRoles: AppRole[] | null = normalizeRolesInput(rolesBody);
+    if (!nextRoles && legacyRole && ['parent', 'educator', 'admin'].includes(legacyRole)) {
+      nextRoles = [legacyRole as AppRole];
+    }
+    if (!nextRoles) {
+      nextRoles = prevRoles;
+    }
+
     user.name = name;
     user.email = email.toLowerCase();
-    if (role && ['parent', 'educator', 'admin'].includes(role)) {
-      user.role = role;
-    }
+    user.roles = nextRoles;
     await user.save();
 
-    const newRole = user.role;
-    if (prevRole === 'educator' && newRole !== 'educator') {
+    const newRoles = getRolesFromUserDoc(user.toObject());
+
+    if (prevRoles.includes('educator') && !newRoles.includes('educator')) {
       await clearEducatorFromAllTeams(id);
-    } else if (newRole === 'educator' && Array.isArray(educatorTeamIds)) {
+    } else if (newRoles.includes('educator') && Array.isArray(educatorTeamIds)) {
       await syncEducatorTeams(id, educatorTeamIds);
     }
 
@@ -70,11 +64,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         id: user._id.toString(),
         name: user.name,
         email: user.email,
-        role: user.role,
+        roles: newRoles,
       },
     });
   } catch (error: any) {
-    console.error('Erreur lors de la mise à jour de l\'utilisateur:', error);
+    console.error("Erreur lors de la mise à jour de l'utilisateur:", error);
     return NextResponse.json(
       { error: 'Erreur serveur: ' + (error.message || 'Erreur inconnue') },
       { status: 500 }
@@ -86,42 +80,30 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   try {
     const authUser = getAuthUser(request);
     if (!authUser || authUser.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Non autorisé' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
     }
 
     await connectDB();
 
     const { id } = await params;
 
-    // Ne pas permettre de supprimer son propre compte
     if (authUser.userId === id) {
-      return NextResponse.json(
-        { error: 'Vous ne pouvez pas supprimer votre propre compte' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Vous ne pouvez pas supprimer votre propre compte' }, { status: 400 });
     }
 
     const user = await User.findById(id);
     if (!user) {
-      return NextResponse.json(
-        { error: 'Utilisateur introuvable' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 });
     }
 
-    // Vérifier qu'il reste au moins un admin
-    const adminCount = await User.countDocuments({ role: 'admin' });
-    if (user.role === 'admin' && adminCount <= 1) {
-      return NextResponse.json(
-        { error: 'Impossible de supprimer le dernier administrateur' },
-        { status: 400 }
-      );
+    const ur = getRolesFromUserDoc(user.toObject());
+
+    const adminCount = await User.countDocuments({ roles: 'admin' });
+    if (ur.includes('admin') && adminCount <= 1) {
+      return NextResponse.json({ error: 'Impossible de supprimer le dernier administrateur' }, { status: 400 });
     }
 
-    if (user.role === 'educator') {
+    if (ur.includes('educator')) {
       await clearEducatorFromAllTeams(id);
     }
 
@@ -129,10 +111,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     return NextResponse.json({ message: 'Utilisateur supprimé avec succès' });
   } catch (error: any) {
-    console.error('Erreur lors de la suppression de l\'utilisateur:', error);
-    return NextResponse.json(
-      { error: 'Erreur serveur' },
-      { status: 500 }
-    );
+    console.error("Erreur lors de la suppression de l'utilisateur:", error);
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

@@ -4,6 +4,16 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import emailjs from '@emailjs/browser';
+import { ROLE_LABELS, type AppRole } from '@/lib/userRoles';
+
+function redirectForActiveRole(router: ReturnType<typeof useRouter>, role: string) {
+  const d = new Date();
+  const todayLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  if (role === 'parent') router.push('/parent/calendar');
+  else if (role === 'educator') router.push(`/educator/availabilities?date=${todayLocal}`);
+  else if (role === 'admin') router.push('/admin');
+  else router.push('/');
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +23,7 @@ export default function LoginPage() {
   const [useCode, setUseCode] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pendingRoles, setPendingRoles] = useState<AppRole[] | null>(null);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
@@ -24,7 +35,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const body: any = { email };
+      const body: Record<string, string> = { email };
       if (useCode) {
         body.code = code;
       } else {
@@ -46,19 +57,50 @@ export default function LoginPage() {
         return;
       }
 
-      // Rediriger selon le rôle
-      const todayLocal = (() => {
-        const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      })();
-      if (data.user.role === 'parent') {
-        router.push('/parent/calendar');
-      } else if (data.user.role === 'educator') {
-        router.push(`/educator/availabilities?date=${todayLocal}`);
-      } else if (data.user.role === 'admin') {
-        router.push('/admin');
+      if (data.requiresRoleSelection && Array.isArray(data.roles)) {
+        setPendingRoles(data.roles);
+        return;
+      }
+
+      if (data.user?.role) {
+        redirectForActiveRole(router, data.user.role);
       }
     } catch (err) {
+      setError('Erreur de connexion');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const completeLoginWithRole = async (selectedRole: AppRole) => {
+    setError('');
+    setLoading(true);
+    try {
+      const body: Record<string, string> = { email, role: selectedRole };
+      if (useCode) {
+        body.code = code;
+      } else {
+        body.password = password;
+      }
+
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Erreur de connexion');
+        return;
+      }
+
+      setPendingRoles(null);
+      if (data.user?.role) {
+        redirectForActiveRole(router, data.user.role);
+      }
+    } catch {
       setError('Erreur de connexion');
     } finally {
       setLoading(false);
@@ -173,6 +215,7 @@ export default function LoginPage() {
             Connectez-vous à votre compte
           </p>
         </div>
+        {!pendingRoles ? (
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -277,6 +320,41 @@ export default function LoginPage() {
             </button>
           </p>
         </form>
+        ) : (
+        <div className="mt-8 space-y-4">
+          <p className="text-center text-gray-700">
+            Plusieurs profils sont associés à cette adresse. Choisissez celui à utiliser pour cette session :
+          </p>
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
+              {error}
+            </div>
+          )}
+          <div className="flex flex-col gap-2">
+            {pendingRoles.map((r) => (
+              <button
+                key={r}
+                type="button"
+                disabled={loading}
+                onClick={() => completeLoginWithRole(r)}
+                className="w-full py-3 px-4 border border-gray-300 rounded-md hover:bg-blue-50 text-left font-medium text-gray-900 disabled:opacity-50"
+              >
+                {ROLE_LABELS[r]}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setPendingRoles(null);
+              setError('');
+            }}
+            className="w-full text-sm text-gray-600 hover:underline"
+          >
+            Retour à la connexion
+          </button>
+        </div>
+        )}
       </div>
 
       {showForgotPassword && (

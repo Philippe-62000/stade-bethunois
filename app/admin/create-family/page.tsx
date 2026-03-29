@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ALL_APP_ROLES, ROLE_LABELS, type AppRole } from '@/lib/userRoles';
 
 interface Team {
   _id: string;
@@ -23,11 +24,21 @@ export default function CreateFamilyPage() {
     parentEmail: '',
     parent2Name: '',
     parent2Email: '',
-    role: 'parent' as 'parent' | 'educator' | 'admin',
     children: [] as Array<{ name: string; teamId: string }>,
   });
+  const [selectedRoles, setSelectedRoles] = useState<AppRole[]>(['parent']);
   /** Équipes auxquelles l’éducateur est affecté (affichage planning / présences) */
   const [educatorTeamIds, setEducatorTeamIds] = useState<string[]>([]);
+
+  const toggleRole = (r: AppRole) => {
+    setSelectedRoles((prev) => {
+      if (prev.includes(r)) {
+        const next = prev.filter((x) => x !== r);
+        return next.length >= 1 ? next : prev;
+      }
+      return [...prev, r].sort((a, b) => ALL_APP_ROLES.indexOf(a) - ALL_APP_ROLES.indexOf(b));
+    });
+  };
 
   useEffect(() => {
     fetch('/api/auth/me', { credentials: 'include' })
@@ -44,10 +55,10 @@ export default function CreateFamilyPage() {
   }, [router]);
 
   useEffect(() => {
-    if (formData.role !== 'educator') {
+    if (!selectedRoles.includes('educator')) {
       setEducatorTeamIds([]);
     }
-  }, [formData.role]);
+  }, [selectedRoles]);
 
   const toggleEducatorTeam = (teamId: string) => {
     setEducatorTeamIds((prev) =>
@@ -87,7 +98,8 @@ export default function CreateFamilyPage() {
         credentials: 'include',
         body: JSON.stringify({
           ...formData,
-          educatorTeamIds: formData.role === 'educator' ? educatorTeamIds : undefined,
+          roles: selectedRoles,
+          educatorTeamIds: selectedRoles.includes('educator') ? educatorTeamIds : undefined,
         }),
       });
 
@@ -116,7 +128,7 @@ export default function CreateFamilyPage() {
   };
 
   const removeChild = (index: number) => {
-    if (formData.role === 'parent' && formData.children.length <= 1) {
+    if (selectedRoles.includes('parent') && formData.children.length <= 1) {
       return;
     }
     setFormData({
@@ -232,22 +244,24 @@ export default function CreateFamilyPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Rôle *
-              </label>
-              <select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as 'parent' | 'educator' | 'admin' })}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="parent">Parent</option>
-                <option value="educator">Éducateur</option>
-                <option value="admin">Administrateur</option>
-              </select>
+              <span className="block text-sm font-medium text-gray-700 mb-2">Rôles du compte *</span>
+              <p className="text-xs text-gray-500 mb-2">Cochez un ou plusieurs profils (ex. parent + éducateur).</p>
+              <div className="space-y-2 border border-gray-200 rounded-md p-3 bg-gray-50">
+                {ALL_APP_ROLES.map((r) => (
+                  <label key={r} className="flex items-center gap-3 cursor-pointer text-sm">
+                    <input
+                      type="checkbox"
+                      checked={selectedRoles.includes(r)}
+                      onChange={() => toggleRole(r)}
+                      className="rounded border-gray-300"
+                    />
+                    <span>{ROLE_LABELS[r]}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
-            {formData.role === 'educator' && (
+            {selectedRoles.includes('educator') && (
               <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                 <h2 className="text-lg font-semibold mb-2">Équipes visibles par cet éducateur</h2>
                 <p className="text-sm text-gray-600 mb-3">
@@ -302,7 +316,7 @@ export default function CreateFamilyPage() {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold">
                   Enfants{' '}
-                  {(formData.role === 'admin' || formData.role === 'educator') && (
+                  {(selectedRoles.includes('admin') || selectedRoles.includes('educator')) && (
                     <span className="text-sm font-normal text-gray-500">(optionnel)</span>
                   )}
                 </h2>
@@ -315,7 +329,7 @@ export default function CreateFamilyPage() {
                 </button>
               </div>
 
-              {formData.role === 'admin' && formData.children.length === 0 && (
+              {selectedRoles.includes('admin') && !selectedRoles.includes('parent') && formData.children.length === 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-4">
                   <p className="text-sm text-blue-800">
                     <strong>Note :</strong> Pour créer un administrateur sans enfant associé, vous pouvez laisser cette section vide.
@@ -323,7 +337,7 @@ export default function CreateFamilyPage() {
                 </div>
               )}
 
-              {formData.role === 'educator' && formData.children.length === 0 && (
+              {selectedRoles.includes('educator') && !selectedRoles.includes('parent') && formData.children.length === 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-4">
                   <p className="text-sm text-blue-800">
                     <strong>Note :</strong> Un éducateur peut être créé sans enfant : il accède au planning (présences, équipes) sans fiche enfant.
@@ -341,7 +355,7 @@ export default function CreateFamilyPage() {
                 <div key={index} className="border border-gray-200 rounded-md p-4 mb-4">
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="font-medium">Enfant {index + 1}</h3>
-                    {(formData.role !== 'parent' || formData.children.length > 1) && (
+                    {(!selectedRoles.includes('parent') || formData.children.length > 1) && (
                       <button
                         type="button"
                         onClick={() => removeChild(index)}
@@ -354,24 +368,24 @@ export default function CreateFamilyPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Nom de l&apos;enfant {formData.role === 'parent' && index === 0 ? '*' : ''}
+                        Nom de l&apos;enfant {selectedRoles.includes('parent') && index === 0 ? '*' : ''}
                       </label>
                       <input
                         type="text"
                         value={child.name}
                         onChange={(e) => updateChild(index, 'name', e.target.value)}
-                        required={formData.role === 'parent' && index === 0}
+                        required={selectedRoles.includes('parent') && index === 0}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Équipe {formData.role === 'parent' && index === 0 ? '*' : ''}
+                        Équipe {selectedRoles.includes('parent') && index === 0 ? '*' : ''}
                       </label>
                       <select
                         value={child.teamId}
                         onChange={(e) => updateChild(index, 'teamId', e.target.value)}
-                        required={formData.role === 'parent' && index === 0}
+                        required={selectedRoles.includes('parent') && index === 0}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       >
                         <option value="">Sélectionner</option>

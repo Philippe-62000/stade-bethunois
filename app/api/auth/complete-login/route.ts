@@ -5,20 +5,22 @@ import User from '@/models/User';
 import { generateToken } from '@/lib/auth';
 import { getRolesFromUserDoc, type AppRole } from '@/lib/userRoles';
 
-export async function GET(request: NextRequest) {
+/**
+ * Après un lien magique, si plusieurs rôles : le client envoie le même code + le rôle choisi.
+ */
+export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const token = searchParams.get('token');
-
-    if (!token) {
-      return NextResponse.json({ error: 'Token manquant' }, { status: 400 });
-    }
-
     await connectDB();
 
-    const loginToken = await LoginToken.findOne({ token });
+    const { token, role: requestedRole } = await request.json();
+
+    if (!token || !requestedRole) {
+      return NextResponse.json({ error: 'Code et rôle requis' }, { status: 400 });
+    }
+
+    const loginToken = await LoginToken.findOne({ token: String(token).trim() });
     if (!loginToken) {
-      return NextResponse.json({ error: 'Lien invalide ou expiré' }, { status: 401 });
+      return NextResponse.json({ error: 'Code invalide ou session expirée. Rechargez le lien.' }, { status: 401 });
     }
 
     if (new Date() > loginToken.expiresAt) {
@@ -33,23 +35,13 @@ export async function GET(request: NextRequest) {
     }
 
     const roles = getRolesFromUserDoc(user.toObject());
-
-    if (roles.length > 1) {
-      return NextResponse.json({
-        requiresRoleSelection: true,
-        roles,
-        loginToken: token,
-        user: {
-          id: user._id.toString(),
-          email: user.email,
-          name: user.name,
-        },
-      });
+    if (!roles.includes(requestedRole as AppRole)) {
+      return NextResponse.json({ error: 'Ce rôle n’est pas autorisé pour ce compte' }, { status: 400 });
     }
 
     await LoginToken.deleteOne({ _id: loginToken._id });
 
-    const activeRole: AppRole = roles[0];
+    const activeRole = requestedRole as AppRole;
 
     const jwt = generateToken({
       userId: user._id.toString(),
@@ -82,7 +74,7 @@ export async function GET(request: NextRequest) {
 
     return response;
   } catch (error: any) {
-    console.error('Erreur login-by-token:', error);
+    console.error('complete-login:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
