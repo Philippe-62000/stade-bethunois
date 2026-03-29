@@ -43,7 +43,7 @@ async function connectDB() {
   }
 
   try {
-    const { migrateLegacyUserRolesOnce } = await import('./userRoles');
+    const { migrateLegacyUserRolesOnce } = await import('./migrateLegacyUserRoles');
     await migrateLegacyUserRolesOnce();
   } catch (e) {
     console.error('migrateLegacyUserRolesOnce:', e);
