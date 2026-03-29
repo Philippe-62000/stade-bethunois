@@ -56,10 +56,14 @@ export default function RegisterPage() {
       }
 
       // Rediriger selon le rôle
+      const todayLocal = (() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      })();
       if (data.user.role === 'parent') {
         router.push('/parent/calendar');
       } else if (data.user.role === 'educator') {
-        router.push('/educator/events');
+        router.push(`/educator/availabilities?date=${todayLocal}`);
       } else if (data.user.role === 'admin') {
         router.push('/admin');
       }

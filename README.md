@@ -2,6 +2,29 @@
 
 Application web pour gérer les présences des enfants dans un club de foot.
 
+## Rôles et redirections après connexion
+
+| Rôle | Destination après login / inscription / lien magique (`login-by-token`) |
+|------|------------------------------------------------------------------------|
+| Parent | `/parent/calendar` |
+| Éducateur | `/educator/availabilities?date=AAAA-MM-JJ` (date du jour, fuseau local du navigateur) |
+| Administrateur | `/admin` |
+
+### Page Présences (`/educator/availabilities`)
+
+- Le filtre **« À partir du »** utilise par défaut la date du jour si aucun paramètre `?date=` n’est présent dans l’URL.
+- Les boutons **« Retour au menu »** (vers l’admin) et **« Retour aux événements »** ne s’affichent que pour un utilisateur connecté avec le rôle **administrateur**. Les **éducateurs** voient uniquement l’en-tête « Présences » et le contenu utile à leur mission, sans ces raccourcis.
+
+### Fichiers concernés (référence technique)
+
+- `app/login/page.tsx`, `app/register/page.tsx` : redirection éducateur vers disponibilités + date du jour.
+- `app/login-by-token/page.tsx` : même logique pour les non-parents (auparavant tout utilisateur non-parent était renvoyé vers `/`).
+- `app/educator/availabilities/page.tsx` : affichage conditionnel des boutons selon `/api/auth/me`.
+
+## Déploiement (Vercel)
+
+Le site public (ex. `stade-bethunois.vercel.app`) est déployé à partir de ce dépôt Git : un **push sur la branche `main`** déclenche un nouveau déploiement si le projet Vercel est lié à ce repository.
+
 ## Fonctionnalités
 
 - **Authentification** avec rôles (Parent, Éducateur, Admin)

@@ -57,6 +57,14 @@ function EducatorAvailabilitiesContent() {
   const [loading, setLoading] = useState(true);
   const [allTeamsData, setAllTeamsData] = useState<EventWithAvailabilities[] | null>(null);
   const [loadingAllTeams, setLoadingAllTeams] = useState(false);
+  const [viewerRole, setViewerRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => setViewerRole(data.user?.role ?? null))
+      .catch(() => setViewerRole(null));
+  }, []);
 
   useEffect(() => {
     fetchEvents();
@@ -217,20 +225,22 @@ function EducatorAvailabilitiesContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-bold text-gray-900">Présences</h1>
-            <div className="flex gap-2">
-              <a
-                href="/admin"
-                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium"
-              >
-                Retour au menu
-              </a>
-              <button
-                onClick={() => router.push('/educator/events')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Retour aux événements
-              </button>
-            </div>
+            {viewerRole === 'admin' && (
+              <div className="flex gap-2">
+                <a
+                  href="/admin"
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium"
+                >
+                  Retour au menu
+                </a>
+                <button
+                  onClick={() => router.push('/educator/events')}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Retour aux événements
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

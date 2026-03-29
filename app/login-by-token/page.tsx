@@ -28,7 +28,13 @@ function LoginByTokenContent() {
           return;
         }
         setStatus('ok');
-        const redirect = data.user?.role === 'parent' ? '/parent/calendar' : '/';
+        const d = new Date();
+        const todayLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const role = data.user?.role;
+        let redirect = '/';
+        if (role === 'parent') redirect = '/parent/calendar';
+        else if (role === 'educator') redirect = `/educator/availabilities?date=${todayLocal}`;
+        else if (role === 'admin') redirect = '/admin';
         router.replace(redirect);
       })
       .catch(() => {
