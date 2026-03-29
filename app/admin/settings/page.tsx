@@ -17,7 +17,7 @@ interface EventType {
   order: number;
 }
 
-interface Admin {
+interface ListedUser {
   _id: string;
   name: string;
   email: string;
@@ -28,15 +28,16 @@ export default function AdminSettingsPage() {
   const router = useRouter();
   const [places, setPlaces] = useState<Place[]>([]);
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
-  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [admins, setAdmins] = useState<ListedUser[]>([]);
+  const [educators, setEducators] = useState<ListedUser[]>([]);
   const [newPlaceName, setNewPlaceName] = useState('');
   const [newEventTypeLabel, setNewEventTypeLabel] = useState('');
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [error, setError] = useState('');
   const [eventTypeError, setEventTypeError] = useState('');
-  const [editingAdmin, setEditingAdmin] = useState<Admin | null>(null);
-  const [deletingAdminId, setDeletingAdminId] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<ListedUser | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/auth/me', { credentials: 'include' })
@@ -50,6 +51,7 @@ export default function AdminSettingsPage() {
         fetchPlaces();
         fetchEventTypes();
         fetchAdmins();
+        fetchEducators();
       })
       .catch(() => router.replace('/login'));
   }, [router]);
@@ -132,6 +134,18 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const fetchEducators = async () => {
+    try {
+      const res = await fetch('/api/users?role=educator', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setEducators(data.users || []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleAddPlace = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -174,29 +188,39 @@ export default function AdminSettingsPage() {
     }
   };
 
-  const handleDeleteAdmin = async (id: string) => {
-    if (!confirm('Supprimer cet administrateur ?')) return;
-    setDeletingAdminId(id);
+  const deleteConfirmLabel = (role: string) => {
+    if (role === 'admin') return 'cet administrateur';
+    if (role === 'educator') return 'cet éducateur';
+    return 'cet utilisateur';
+  };
+
+  const handleDeleteUser = async (user: ListedUser) => {
+    if (!confirm(`Supprimer ${deleteConfirmLabel(user.role)} ?`)) return;
+    setDeletingUserId(user._id);
     try {
-      const res = await fetch(`/api/users/${id}`, {
+      const res = await fetch(`/api/users/${user._id}`, {
         method: 'DELETE',
         credentials: 'include',
       });
       const data = await res.json();
       if (res.ok) {
-        setAdmins((prev) => prev.filter((a) => a._id !== id));
+        if (user.role === 'admin') {
+          setAdmins((prev) => prev.filter((a) => a._id !== user._id));
+        } else if (user.role === 'educator') {
+          setEducators((prev) => prev.filter((u) => u._id !== user._id));
+        }
       } else {
         alert(data.error || 'Erreur lors de la suppression');
       }
     } catch (e) {
       alert('Erreur lors de la suppression');
     } finally {
-      setDeletingAdminId(null);
+      setDeletingUserId(null);
     }
   };
 
-  const handleSendCode = async (admin: Admin) => {
-    if (!confirm(`Envoyer un email à ${admin.name} (${admin.email}) avec le code de connexion ?`)) {
+  const handleSendCode = async (target: ListedUser) => {
+    if (!confirm(`Envoyer un email à ${target.name} (${target.email}) avec le code de connexion ?`)) {
       return;
     }
 
@@ -205,7 +229,7 @@ export default function AdminSettingsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ parentId: admin._id, sendEmail: true }),
+        body: JSON.stringify({ parentId: target._id, sendEmail: true }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -226,7 +250,7 @@ export default function AdminSettingsPage() {
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
     <h1 style="color: #2563eb; margin-top: 0;">Code de connexion</h1>
-    <p>Bonjour ${data.parentName || 'Administrateur'},</p>
+    <p>Bonjour ${data.parentName || 'Utilisateur'},</p>
     <p>Voici votre code de connexion pour accéder au site :</p>
     <div style="background-color: #ffffff; border: 2px solid #2563eb; border-radius: 6px; padding: 20px; text-align: center; margin: 20px 0;">
       <p style="margin: 0; font-size: 14px; color: #666;">Votre code de connexion :</p>
@@ -268,7 +292,7 @@ export default function AdminSettingsPage() {
               );
 
               if (result.status === 200 || result.text === 'OK') {
-                alert(`Email envoyé à ${admin.email}`);
+                alert(`Email envoyé à ${target.email}`);
               } else {
                 throw new Error(result.text || `Erreur ${result.status || 'inconnue'}`);
               }
@@ -441,18 +465,72 @@ export default function AdminSettingsPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setEditingAdmin(admin)}
+                          onClick={() => setEditingUser(admin)}
                           className="text-blue-600 hover:underline"
                         >
                           Modifier
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDeleteAdmin(admin._id)}
-                          disabled={deletingAdminId === admin._id}
+                          onClick={() => handleDeleteUser(admin)}
+                          disabled={deletingUserId === admin._id}
                           className="text-red-600 hover:underline disabled:opacity-50"
                         >
-                          {deletingAdminId === admin._id ? 'Suppression...' : 'Supprimer'}
+                          {deletingUserId === admin._id ? 'Suppression...' : 'Supprimer'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+          <h2 className="text-lg font-semibold mb-4">Éducateurs</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Liste des comptes éducateurs. Vous pouvez leur envoyer un code de connexion par email, modifier leurs informations ou les supprimer.
+          </p>
+          {educators.length === 0 ? (
+            <p className="text-gray-500 text-sm">Aucun éducateur. Créez-en un via « Créer une famille » avec le rôle Éducateur.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {educators.map((edu) => (
+                    <tr key={edu._id}>
+                      <td className="px-4 py-3 text-sm text-gray-900">{edu.name}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{edu.email}</td>
+                      <td className="px-4 py-3 text-right text-sm space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => handleSendCode(edu)}
+                          className="text-green-600 hover:underline"
+                        >
+                          Envoyer code
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingUser(edu)}
+                          className="text-blue-600 hover:underline"
+                        >
+                          Modifier
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteUser(edu)}
+                          disabled={deletingUserId === edu._id}
+                          className="text-red-600 hover:underline disabled:opacity-50"
+                        >
+                          {deletingUserId === edu._id ? 'Suppression...' : 'Supprimer'}
                         </button>
                       </td>
                     </tr>
@@ -464,12 +542,13 @@ export default function AdminSettingsPage() {
         </div>
       </div>
 
-      {editingAdmin && (
-        <EditAdminModal
-          admin={editingAdmin}
+      {editingUser && (
+        <EditUserModal
+          user={editingUser}
           onClose={() => {
-            setEditingAdmin(null);
+            setEditingUser(null);
             fetchAdmins();
+            fetchEducators();
           }}
         />
       )}
@@ -477,17 +556,23 @@ export default function AdminSettingsPage() {
   );
 }
 
-function EditAdminModal({
-  admin,
+function editModalTitle(role: string) {
+  if (role === 'admin') return "Modifier l'administrateur";
+  if (role === 'educator') return "Modifier l'éducateur";
+  return "Modifier l'utilisateur";
+}
+
+function EditUserModal({
+  user,
   onClose,
 }: {
-  admin: Admin;
+  user: ListedUser;
   onClose: () => void;
 }) {
   const [formData, setFormData] = useState({
-    name: admin.name,
-    email: admin.email,
-    role: admin.role,
+    name: user.name,
+    email: user.email,
+    role: user.role,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -498,7 +583,7 @@ function EditAdminModal({
     setLoading(true);
 
     try {
-      const res = await fetch(`/api/users/${admin._id}`, {
+      const res = await fetch(`/api/users/${user._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -522,7 +607,7 @@ function EditAdminModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-md w-full p-6">
-        <h2 className="text-xl font-bold mb-4">Modifier l'administrateur</h2>
+        <h2 className="text-xl font-bold mb-4">{editModalTitle(user.role)}</h2>
 
         {error && (
           <div className="mb-4 p-3 bg-red-50 text-red-700 rounded text-sm">{error}</div>
