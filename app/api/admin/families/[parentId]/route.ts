@@ -4,6 +4,8 @@ import User from '@/models/User';
 import Child from '@/models/Child';
 import '@/models/Team';
 import { getAuthUser } from '@/lib/auth';
+import { getRolesFromUserDoc, normalizeRolesInput, type AppRole } from '@/lib/userRoles';
+import { syncEducatorTeams, clearEducatorFromAllTeams } from '@/lib/educatorTeams';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ parentId: string }> }) {
   try {
@@ -25,6 +27,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       parent2Name,
       parent2Email,
       children,
+      parent1Roles,
+      parent2Roles,
+      parent1EducatorTeamIds,
+      parent2EducatorTeamIds,
     } = body;
 
     // Validation
@@ -55,10 +61,30 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
     }
 
+    const prevRoles1 = getRolesFromUserDoc(parent1.toObject());
+    let nextRoles1: AppRole[] | null = normalizeRolesInput(parent1Roles);
+    if (!nextRoles1) nextRoles1 = prevRoles1;
+    const childCountP1 = await Child.countDocuments({
+      $or: [{ parentId }, { parentId2: parentId }],
+    });
+    if (childCountP1 > 0 && !nextRoles1.includes('parent')) {
+      return NextResponse.json(
+        { error: 'Le parent 1 doit conserver le rôle « parent » tant qu’il a des enfants liés à ce compte.' },
+        { status: 400 }
+      );
+    }
+
     // Mettre à jour le parent 1
     parent1.name = parentName;
     parent1.email = parentEmail.toLowerCase();
+    parent1.roles = nextRoles1;
     await parent1.save();
+
+    if (prevRoles1.includes('educator') && !nextRoles1.includes('educator')) {
+      await clearEducatorFromAllTeams(parentId);
+    } else if (nextRoles1.includes('educator') && Array.isArray(parent1EducatorTeamIds)) {
+      await syncEducatorTeams(parentId, parent1EducatorTeamIds);
+    }
 
     // Gérer le parent 2
     let parent2 = null;
@@ -84,9 +110,31 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
               );
             }
           }
+          const prevRoles2 = getRolesFromUserDoc(parent2.toObject());
+          let nextRoles2: AppRole[] | null = normalizeRolesInput(parent2Roles);
+          if (!nextRoles2) nextRoles2 = prevRoles2;
+          const childCountP2 = await Child.countDocuments({
+            $or: [{ parentId: parent2Id }, { parentId2: parent2Id }],
+          });
+          if (childCountP2 > 0 && !nextRoles2.includes('parent')) {
+            return NextResponse.json(
+              {
+                error:
+                  'Le parent 2 doit conserver le rôle « parent » tant qu’il a des enfants liés à ce compte.',
+              },
+              { status: 400 }
+            );
+          }
           parent2.name = parent2Name;
           parent2.email = parent2Email.toLowerCase();
+          parent2.roles = nextRoles2;
           await parent2.save();
+
+          if (prevRoles2.includes('educator') && !nextRoles2.includes('educator')) {
+            await clearEducatorFromAllTeams(parent2Id);
+          } else if (nextRoles2.includes('educator') && Array.isArray(parent2EducatorTeamIds)) {
+            await syncEducatorTeams(parent2Id, parent2EducatorTeamIds);
+          }
         }
       } else {
         // Créer un nouveau parent2
@@ -98,16 +146,22 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           );
         }
 
+        const pr2 = normalizeRolesInput(parent2Roles);
+        const rolesNew: AppRole[] = pr2 && pr2.length > 0 ? pr2 : ['parent'];
+
         parent2 = await User.create({
           email: parent2Email.toLowerCase(),
           password: require('crypto').randomBytes(32).toString('hex'), // Mot de passe non utilisé
           name: parent2Name,
-          role: 'parent',
+          roles: rolesNew,
           notificationSettings: {
             enabled: true,
             reminderEnabled: true,
           },
         });
+        if (rolesNew.includes('educator') && Array.isArray(parent2EducatorTeamIds)) {
+          await syncEducatorTeams(parent2._id.toString(), parent2EducatorTeamIds);
+        }
       }
     } else {
       // Supprimer le parent2 si on le retire

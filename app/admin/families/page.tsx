@@ -3,17 +3,23 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ALL_APP_ROLES, ROLE_LABELS, type AppRole } from '@/lib/userRoles';
+
 interface Family {
   parent1: {
     id: string;
     name: string;
     email: string;
+    roles?: AppRole[];
   };
   parent2?: {
     id: string;
     name: string;
     email: string;
+    roles?: AppRole[];
   };
+  parent1EducatorTeamIds?: string[];
+  parent2EducatorTeamIds?: string[];
   children: Array<{
     id: string;
     name: string;
@@ -264,6 +270,11 @@ function EditFamilyModal({
   teams: Array<{ _id: string; name: string; category: string }>;
   onClose: () => void;
 }) {
+  const initialP1Roles =
+    family.parent1.roles && family.parent1.roles.length > 0 ? family.parent1.roles : (['parent'] as AppRole[]);
+  const initialP2Roles =
+    family.parent2?.roles && family.parent2.roles.length > 0 ? family.parent2.roles : (['parent'] as AppRole[]);
+
   const [formData, setFormData] = useState({
     parentName: family.parent1.name,
     parentEmail: family.parent1.email,
@@ -275,8 +286,35 @@ function EditFamilyModal({
       teamId: teams.find(t => t.name === c.teamId.name && t.category === (c.teamId.category || ''))?._id || '',
     })),
   });
+  const [parent1Roles, setParent1Roles] = useState<AppRole[]>(initialP1Roles);
+  const [parent2Roles, setParent2Roles] = useState<AppRole[]>(initialP2Roles);
+  const [parent1EducatorTeamIds, setParent1EducatorTeamIds] = useState<string[]>(
+    family.parent1EducatorTeamIds ?? []
+  );
+  const [parent2EducatorTeamIds, setParent2EducatorTeamIds] = useState<string[]>(
+    family.parent2EducatorTeamIds ?? []
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const toggleRole = (target: 'p1' | 'p2', r: AppRole) => {
+    const setFn = target === 'p1' ? setParent1Roles : setParent2Roles;
+    setFn((prev) => {
+      if (prev.includes(r)) {
+        const next = prev.filter((x) => x !== r);
+        return next.length >= 1 ? next : prev;
+      }
+      return [...prev, r].sort((a, b) => ALL_APP_ROLES.indexOf(a) - ALL_APP_ROLES.indexOf(b));
+    });
+  };
+
+  useEffect(() => {
+    if (!parent1Roles.includes('educator')) setParent1EducatorTeamIds([]);
+  }, [parent1Roles]);
+
+  useEffect(() => {
+    if (!parent2Roles.includes('educator')) setParent2EducatorTeamIds([]);
+  }, [parent2Roles]);
 
   const addChild = () => {
     setFormData({
@@ -304,11 +342,24 @@ function EditFamilyModal({
     setLoading(true);
 
     try {
+      const hasParent2 =
+        Boolean(formData.parent2Name?.trim()) && Boolean(formData.parent2Email?.trim());
+
       const res = await fetch(`/api/admin/families/${family.parent1.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          parent1Roles,
+          parent1EducatorTeamIds: parent1Roles.includes('educator') ? parent1EducatorTeamIds : [],
+          ...(hasParent2
+            ? {
+                parent2Roles,
+                parent2EducatorTeamIds: parent2Roles.includes('educator') ? parent2EducatorTeamIds : [],
+              }
+            : {}),
+        }),
       });
 
       const data = await res.json();
@@ -366,6 +417,79 @@ function EditFamilyModal({
           </div>
 
           <div>
+            <span className="block text-sm font-medium text-gray-700 mb-2">Rôles du compte — Parent 1 *</span>
+            <p className="text-xs text-gray-500 mb-2">Cochez un ou plusieurs profils (ex. parent + éducateur).</p>
+            <div className="space-y-2 border border-gray-200 rounded-md p-3 bg-gray-50">
+              {ALL_APP_ROLES.map((r) => (
+                <label key={r} className="flex items-center gap-3 cursor-pointer text-sm">
+                  <input
+                    type="checkbox"
+                    checked={parent1Roles.includes(r)}
+                    onChange={() => toggleRole('p1', r)}
+                    className="rounded border-gray-300"
+                  />
+                  <span>{ROLE_LABELS[r]}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {parent1Roles.includes('educator') && (
+            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <h3 className="text-md font-semibold mb-2">Équipes visibles — Parent 1 (éducateur)</h3>
+              <p className="text-sm text-gray-600 mb-3">
+                Cochez les équipes dont cet éducateur pourra voir les événements et les présences.
+              </p>
+              {teams.length === 0 ? (
+                <p className="text-amber-800 text-sm">Aucune équipe en base.</p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => setParent1EducatorTeamIds(teams.map((t) => t._id))}
+                      className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-100"
+                    >
+                      Tout sélectionner
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setParent1EducatorTeamIds([])}
+                      className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-100"
+                    >
+                      Tout désélectionner
+                    </button>
+                  </div>
+                  <ul className="space-y-2 max-h-56 overflow-y-auto border border-gray-200 rounded-md p-3 bg-white">
+                    {teams.map((team) => (
+                      <li key={team._id}>
+                        <label className="flex items-center gap-3 cursor-pointer text-sm">
+                          <input
+                            type="checkbox"
+                            checked={parent1EducatorTeamIds.includes(team._id)}
+                            onChange={() =>
+                              setParent1EducatorTeamIds((prev) =>
+                                prev.includes(team._id)
+                                  ? prev.filter((id) => id !== team._id)
+                                  : [...prev, team._id]
+                              )
+                            }
+                            className="rounded border-gray-300"
+                          />
+                          <span>
+                            <span className="font-medium">{team.name}</span>
+                            <span className="text-gray-500"> ({team.category})</span>
+                          </span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
+
+          <div>
             <h2 className="text-lg font-semibold mb-4">Parent 2 (optionnel)</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -392,6 +516,85 @@ function EditFamilyModal({
               </div>
             </div>
           </div>
+
+          {(family.parent2 ||
+            Boolean(formData.parent2Name?.trim()) ||
+            Boolean(formData.parent2Email?.trim())) && (
+            <>
+              <div>
+                <span className="block text-sm font-medium text-gray-700 mb-2">Rôles du compte — Parent 2 *</span>
+                <p className="text-xs text-gray-500 mb-2">Cochez un ou plusieurs profils.</p>
+                <div className="space-y-2 border border-gray-200 rounded-md p-3 bg-gray-50">
+                  {ALL_APP_ROLES.map((r) => (
+                    <label key={r} className="flex items-center gap-3 cursor-pointer text-sm">
+                      <input
+                        type="checkbox"
+                        checked={parent2Roles.includes(r)}
+                        onChange={() => toggleRole('p2', r)}
+                        className="rounded border-gray-300"
+                      />
+                      <span>{ROLE_LABELS[r]}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {parent2Roles.includes('educator') && (
+                <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <h3 className="text-md font-semibold mb-2">Équipes visibles — Parent 2 (éducateur)</h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Cochez les équipes dont cet éducateur pourra voir les événements et les présences.
+                  </p>
+                  {teams.length === 0 ? (
+                    <p className="text-amber-800 text-sm">Aucune équipe en base.</p>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        <button
+                          type="button"
+                          onClick={() => setParent2EducatorTeamIds(teams.map((t) => t._id))}
+                          className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-100"
+                        >
+                          Tout sélectionner
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setParent2EducatorTeamIds([])}
+                          className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-100"
+                        >
+                          Tout désélectionner
+                        </button>
+                      </div>
+                      <ul className="space-y-2 max-h-56 overflow-y-auto border border-gray-200 rounded-md p-3 bg-white">
+                        {teams.map((team) => (
+                          <li key={team._id}>
+                            <label className="flex items-center gap-3 cursor-pointer text-sm">
+                              <input
+                                type="checkbox"
+                                checked={parent2EducatorTeamIds.includes(team._id)}
+                                onChange={() =>
+                                  setParent2EducatorTeamIds((prev) =>
+                                    prev.includes(team._id)
+                                      ? prev.filter((id) => id !== team._id)
+                                      : [...prev, team._id]
+                                  )
+                                }
+                                className="rounded border-gray-300"
+                              />
+                              <span>
+                                <span className="font-medium">{team.name}</span>
+                                <span className="text-gray-500"> ({team.category})</span>
+                              </span>
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              )}
+            </>
+          )}
 
           <div>
             <div className="flex justify-between items-center mb-4">
