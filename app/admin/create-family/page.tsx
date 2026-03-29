@@ -91,14 +91,13 @@ export default function CreateFamilyPage() {
   };
 
   const removeChild = (index: number) => {
-    // Pour les admins, on peut supprimer tous les enfants
-    // Pour les autres rôles, on garde au moins un enfant
-    if (formData.role === 'admin' || formData.children.length > 1) {
-      setFormData({
-        ...formData,
-        children: formData.children.filter((_, i) => i !== index),
-      });
+    if (formData.role === 'parent' && formData.children.length <= 1) {
+      return;
     }
+    setFormData({
+      ...formData,
+      children: formData.children.filter((_, i) => i !== index),
+    });
   };
 
   const updateChild = (index: number, field: string, value: string) => {
@@ -226,7 +225,10 @@ export default function CreateFamilyPage() {
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold">
-                  Enfants {formData.role === 'admin' && <span className="text-sm font-normal text-gray-500">(optionnel)</span>}
+                  Enfants{' '}
+                  {(formData.role === 'admin' || formData.role === 'educator') && (
+                    <span className="text-sm font-normal text-gray-500">(optionnel)</span>
+                  )}
                 </h2>
                 <button
                   type="button"
@@ -245,6 +247,14 @@ export default function CreateFamilyPage() {
                 </div>
               )}
 
+              {formData.role === 'educator' && formData.children.length === 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>Note :</strong> Un éducateur peut être créé sans enfant : il accède au planning (présences, équipes) sans fiche enfant.
+                  </p>
+                </div>
+              )}
+
               {teams.length === 0 && formData.children.length > 0 && (
                 <p className="text-amber-700 text-sm mb-4">
                   Créez au moins une équipe (Menu → Gérer les équipes) avant de créer des enfants.
@@ -255,7 +265,7 @@ export default function CreateFamilyPage() {
                 <div key={index} className="border border-gray-200 rounded-md p-4 mb-4">
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="font-medium">Enfant {index + 1}</h3>
-                    {(formData.role === 'admin' || formData.children.length > 1) && (
+                    {(formData.role !== 'parent' || formData.children.length > 1) && (
                       <button
                         type="button"
                         onClick={() => removeChild(index)}
@@ -268,24 +278,24 @@ export default function CreateFamilyPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Nom de l&apos;enfant {formData.role !== 'admin' && index === 0 ? '*' : ''}
+                        Nom de l&apos;enfant {formData.role === 'parent' && index === 0 ? '*' : ''}
                       </label>
                       <input
                         type="text"
                         value={child.name}
                         onChange={(e) => updateChild(index, 'name', e.target.value)}
-                        required={formData.role !== 'admin' && index === 0}
+                        required={formData.role === 'parent' && index === 0}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Équipe {formData.role !== 'admin' && index === 0 ? '*' : ''}
+                        Équipe {formData.role === 'parent' && index === 0 ? '*' : ''}
                       </label>
                       <select
                         value={child.teamId}
                         onChange={(e) => updateChild(index, 'teamId', e.target.value)}
-                        required={formData.role !== 'admin' && index === 0}
+                        required={formData.role === 'parent' && index === 0}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       >
                         <option value="">Sélectionner</option>

@@ -43,11 +43,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Pour les administrateurs, les enfants sont optionnels
-    if (role !== 'admin') {
+    // Enfants obligatoires uniquement pour les parents (l’éducateur consulte le planning sans enfant rattaché)
+    if (role === 'parent') {
       if (!children || !Array.isArray(children) || children.length === 0) {
         return NextResponse.json(
-          { error: 'Au moins un enfant requis pour les parents et éducateurs' },
+          { error: 'Au moins un enfant requis pour les comptes parents' },
           { status: 400 }
         );
       }
@@ -104,9 +104,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Créer les enfants (seulement si le rôle n'est pas admin ou si des enfants sont fournis)
+    // Créer les enfants si la liste en contient (parents : au moins un ; éducateur / admin : optionnel)
     const createdChildren = [];
-    if (role !== 'admin' || childrenArray.length > 0) {
+    if (childrenArray.length > 0) {
       for (const childData of childrenArray) {
         if (!childData.name || !childData.teamId) {
           continue; // Ignorer les enfants invalides

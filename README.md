@@ -21,6 +21,12 @@ Application web pour gérer les présences des enfants dans un club de foot.
 - `app/login-by-token/page.tsx` : même logique pour les non-parents (auparavant tout utilisateur non-parent était renvoyé vers `/`).
 - `app/educator/availabilities/page.tsx` : affichage conditionnel des boutons selon `/api/auth/me`.
 
+### Création de famille (admin)
+
+- **Parent** : au moins un enfant obligatoire.
+- **Éducateur** : aucun enfant obligatoire (compte dédié au planning / équipes sans fiche enfant).
+- **Administrateur** : inchangé, enfants optionnels.
+
 ## Déploiement (Vercel)
 
 Le site public (ex. `stade-bethunois.vercel.app`) est déployé à partir de ce dépôt Git : un **push sur la branche `main`** déclenche un nouveau déploiement si le projet Vercel est lié à ce repository.
