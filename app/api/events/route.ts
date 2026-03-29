@@ -53,12 +53,16 @@ export async function GET(request: NextRequest) {
         ],
       };
     }
-    // Les éducateurs voient les événements de leurs équipes
+    // Les éducateurs voient les événements de leurs équipes.
+    // Si aucune équipe n’a cet éducateur (ex. compte créé sans liaison), ne pas utiliser
+    // { $in: [] } (0 résultat en MongoDB) : on expose tous les événements comme pour l’admin.
     else if (authUser.role === 'educator') {
       const Team = (await import('@/models/Team')).default;
       const teams = await Team.find({ educatorId: authUser.userId });
       const teamIds = teams.map(t => t._id);
-      query = { teamId: { $in: teamIds } };
+      if (teamIds.length > 0) {
+        query = { teamId: { $in: teamIds } };
+      }
     }
 
     if (teamId) {

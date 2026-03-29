@@ -23,11 +23,12 @@ export async function GET(request: NextRequest) {
 
     let query: any = {};
     if (authUser.role === 'educator') {
-      // Récupérer les équipes de l'éducateur
       const Team = (await import('@/models/Team')).default;
       const teams = await Team.find({ educatorId: authUser.userId });
       const teamIds = teams.map(t => t._id);
-      query = { teamId: { $in: teamIds } };
+      if (teamIds.length > 0) {
+        query = { teamId: { $in: teamIds } };
+      }
     }
 
     const rules = await RecurringRule.find(query)

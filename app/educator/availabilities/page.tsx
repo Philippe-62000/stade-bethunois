@@ -254,7 +254,6 @@ function EducatorAvailabilitiesContent() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">À partir du</label>
                 <input
                   type="date"
-                  min={todayStr}
                   value={dateParam}
                   onChange={(e) => router.push(`/educator/availabilities?date=${e.target.value}`)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
@@ -396,7 +395,9 @@ function EducatorAvailabilitiesContent() {
               <div className="bg-white rounded-lg shadow-md p-6">
                 <p className="text-gray-500 text-center">
                   {displayedEvents.length === 0
-                    ? `Aucun événement à partir du ${format(new Date(dateParam), 'dd/MM/yyyy', { locale: fr })}`
+                    ? events.length === 0
+                      ? `Aucun événement à partir du ${format(new Date(dateParam), 'dd/MM/yyyy', { locale: fr })}`
+                      : `Aucun événement à partir du ${format(new Date(dateParam), 'dd/MM/yyyy', { locale: fr })}. Essayez une date de début plus ancienne dans la colonne de gauche.`
                     : 'Sélectionnez un événement'}
                 </p>
               </div>

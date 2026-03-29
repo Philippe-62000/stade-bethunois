@@ -12,7 +12,9 @@ Application web pour gérer les présences des enfants dans un club de foot.
 
 ### Page Présences (`/educator/availabilities`)
 
-- Le filtre **« À partir du »** utilise par défaut la date du jour si aucun paramètre `?date=` n’est présent dans l’URL.
+- **Événements visibles** : si l’éducateur a au moins une équipe avec son `educatorId`, seuls les événements de ces équipes ; sinon (aucune équipe rattachée à son compte) la liste suit le même périmètre que l’admin — tous les événements du club.
+- Le filtre **« À partir du »** peut viser une date passée (pas de limite « min = aujourd’hui ») pour consulter des présences antérieures.
+- Le filtre utilise par défaut la date du jour si aucun paramètre `?date=` n’est présent dans l’URL.
 - Les boutons **« Retour au menu »** (vers l’admin) et **« Retour aux événements »** ne s’affichent que pour un utilisateur connecté avec le rôle **administrateur**. Les **éducateurs** voient uniquement l’en-tête « Présences » et le contenu utile à leur mission, sans ces raccourcis.
 
 ### Fichiers concernés (référence technique)
