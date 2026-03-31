@@ -58,6 +58,12 @@ function EducatorAvailabilitiesContent() {
   const [allTeamsData, setAllTeamsData] = useState<EventWithAvailabilities[] | null>(null);
   const [loadingAllTeams, setLoadingAllTeams] = useState(false);
   const [viewerRole, setViewerRole] = useState<string | null>(null);
+  const [nowTick, setNowTick] = useState(() => new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     fetch('/api/auth/me', { credentials: 'include' })
@@ -65,6 +71,15 @@ function EducatorAvailabilitiesContent() {
       .then((data) => setViewerRole(data.user?.role ?? null))
       .catch(() => setViewerRole(null));
   }, []);
+
+  const handleGoToLogin = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch {
+      /* on redirige quand même */
+    }
+    router.push('/login');
+  };
 
   useEffect(() => {
     fetchEvents();
@@ -224,7 +239,26 @@ function EducatorAvailabilitiesContent() {
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-bold text-gray-900">Présences</h1>
+            <div className="flex flex-wrap items-center gap-3 min-w-0">
+              <h1 className="text-2xl font-bold text-gray-900">Présences</h1>
+              {viewerRole === 'educator' && (
+                <>
+                  <span
+                    className="text-sm text-gray-600 tabular-nums shrink-0"
+                    title="Heure locale (mise à jour chaque seconde)"
+                  >
+                    {format(nowTick, "EEEE d MMMM yyyy '·' HH:mm:ss", { locale: fr })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleGoToLogin}
+                    className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium shrink-0"
+                  >
+                    Connexion
+                  </button>
+                </>
+              )}
+            </div>
             {viewerRole === 'admin' && (
               <div className="flex gap-2">
                 <a
